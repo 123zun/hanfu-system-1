@@ -15,7 +15,7 @@
         <p>这里是一个分享、交流、学习汉服文化的平台</p>
         <div class="features">
           <div class="feature-card">
-            <div class="feature-icon">👘</div>
+            <div class="feature-icon">📜</div>
             <h3>汉服资讯</h3>
             <p>获取最新的汉服文化动态和资讯</p>
           </div>
@@ -58,9 +58,13 @@
 .home-header {
   text-align: center;
   padding: 40px 20px;
-  background: white;
   border-bottom: 1px solid rgba(212, 175, 55, 0.2);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background-image: url('@/assets/首页.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
 }
 
 .title {

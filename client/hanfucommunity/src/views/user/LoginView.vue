@@ -77,24 +77,6 @@
           </el-form-item>
         </el-form>
 
-        <!-- 第三方登录 -->
-        <div class="social-login">
-          <div class="divider">
-            <span>其他登录方式</span>
-          </div>
-          <div class="social-buttons">
-            <el-button class="social-btn wechat" circle>
-              <el-icon size="20"><ChatDotRound /></el-icon>
-            </el-button>
-            <el-button class="social-btn qq" circle>
-              <el-icon size="20"><Iphone /></el-icon>
-            </el-button>
-            <el-button class="social-btn weibo" circle>
-              <el-icon size="20"><Promotion /></el-icon>
-            </el-button>
-          </div>
-        </div>
-
         <!-- 注册链接 -->
         <div class="register-link">
           还没有账号？
@@ -114,7 +96,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, House, ChatDotRound, Iphone, Promotion } from '@element-plus/icons-vue'
+import { User, Lock, House } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { login } from '@/api/modules/user'
 
@@ -345,6 +327,7 @@ onMounted(() => {
 .forgot-password {
   font-size: 0.9rem;
   color: #999;
+  margin-left: 185px;
 }
 
 .forgot-password:hover {
@@ -366,61 +349,8 @@ onMounted(() => {
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
 
-.social-login {
-  margin: 30px 0;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 20px 0;
-  color: #999;
-  font-size: 0.9rem;
-}
-
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #eee;
-}
-
 .divider span {
   padding: 0 15px;
-}
-
-.social-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.social-btn {
-  width: 50px;
-  height: 50px;
-  border: 1px solid #eee;
-  background: white;
-  transition: all 0.3s;
-}
-
-.social-btn.wechat:hover {
-  background: #07C160;
-  color: white;
-  border-color: #07C160;
-}
-
-.social-btn.qq:hover {
-  background: #12B7F5;
-  color: white;
-  border-color: #12B7F5;
-}
-
-.social-btn.weibo:hover {
-  background: #E6162D;
-  color: white;
-  border-color: #E6162D;
 }
 
 .register-link {
