@@ -35,11 +35,6 @@ public class UserServiceImpl implements UserService {
             userInfo.setCreateTime(now);
             userInfo.setUpdateTime(now);
 
-            // 2. 密码加密（如果密码是明文）
-            if (StringUtils.hasText(userInfo.getPassword())) {
-                userInfo.setPassword(encryptPassword(userInfo.getPassword()));
-            }
-
             // 3. 尝试插入（让数据库唯一约束来保证唯一性）
             int result = userMapper.insert(userInfo);
 

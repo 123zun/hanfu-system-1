@@ -44,26 +44,35 @@ export const changePassword = (data) => {
     })
 }
 
-// 上传头像
-export const uploadAvatar = (file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    return request({
-        url: '/user/upload-avatar',
-        method: 'POST',
-        data: formData,
-        isUpload: true, // 标记为上传文件
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    })
-}
-
 // 退出登录
 export const logout = () => {
     return request({
         url: '/user/logout',
         method: 'POST'
+    })
+}
+
+// 上传头像
+export const uploadAvatar = (userId, file) => {
+    const formData = new FormData()
+    formData.append('userId', userId)
+    formData.append('file', file)
+
+    return request({
+        url: '/user/avatar',
+        method: 'POST',
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        },
+        showLoading: false  // 上传时不显示全局loading
+    })
+}
+
+// 获取默认头像
+export const getDefaultAvatar = () => {
+    return request({
+        url: '/user/avatar/default',
+        method: 'GET'
     })
 }

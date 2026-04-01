@@ -34,7 +34,7 @@ public class UserInfo {
     private String gender = "male";
 
     @TableField("avatar")
-    private String avatar;
+    private String avatar = "/uploads/avatars/default.jpg";
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;

@@ -97,15 +97,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, House } from '@element-plus/icons-vue'
-import { useUserStore } from '@/stores/user'
 import { login } from '@/api/modules/user'
 
 // 路由
 const router = useRouter()
 const route = useRoute()
-
-// 用户状态
-const userStore = useUserStore()
 
 // 表单引用
 const loginFormRef = ref()
@@ -143,38 +139,60 @@ const handleLogin = async () => {
     loading.value = true
 
     try {
+      console.log('🚀 发送登录请求:', {
+        username: loginForm.username,
+        password: '***' // 不显示真实密码
+      })
+
       // 调用用户登录API
       const response = await login({
         username: loginForm.username,
         password: loginForm.password
       })
 
-      // 假设后端返回: { token: 'xxx', userInfo: {...} }
-      const { token, userInfo } = response
+      console.log('✅ 登录API返回:', response)
 
-      // 保存到Pinia store
-      userStore.token = token
-      userStore.userInfo = userInfo
-      userStore.isLogin = true
+      // 新的响应格式: { code: 200, message: 'xxx', data: {token: 'xxx', userInfo: {...}} }
+      if (response && (response.code === 200 || response.code === 0)) {
+        const data = response.data || {}
+        const token = data.token
+        const userInfo = data.userInfo || data
 
-      // 保存到localStorage
-      localStorage.setItem('hanfu_token', token)
-      localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
+        if (token) {
+          // 保存到localStorage
+          localStorage.setItem('hanfu_token', token)
+          localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
 
-      // 如果记住我
-      if (loginForm.remember) {
-        localStorage.setItem('remember_me', 'true')
+          // 如果记住我
+          if (loginForm.remember) {
+            localStorage.setItem('remember_me', 'true')
+          } else {
+            localStorage.removeItem('remember_me')
+          }
+
+          console.log('登录成功，token已保存')
+          ElMessage.success(response.message || '登录成功！')
+
+          // 跳转到首页或来源页面
+          const redirect = route.query.redirect || '/'
+          router.push(redirect)
+        } else {
+          console.warn('登录成功但未返回token')
+          ElMessage.success(response.message || '登录成功！')
+        }
+      } else {
+        // 处理其他code
+        ElMessage.error(response?.message || '登录失败')
       }
 
-      ElMessage.success('登录成功！')
-
-      // 跳转到首页或来源页面
-      const redirect = route.query.redirect || '/'
-      router.push(redirect)
-
     } catch (error) {
-      // 错误已经在拦截器中统一处理
-      console.error('登录失败:', error)
+      console.error('❌ 登录失败错误:', error)
+
+      // 错误信息已经在拦截器中显示过了
+      // 这里可以添加额外的错误处理逻辑
+      if (!error.response && error.message && !error.message.includes('JSON')) {
+        ElMessage.error('登录失败: ' + error.message)
+      }
     } finally {
       loading.value = false
     }
