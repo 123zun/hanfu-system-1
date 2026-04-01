@@ -21,9 +21,15 @@ public class UserController {
 
     // 用户注册
     @PostMapping("/register")
-    public R<?> register(@Valid @RequestBody UserInfo userInfo) {
-        System.out.println("111111111111111111111");
-        return userService.register(userInfo);
+    public R<?> register(@RequestBody UserInfo userInfo) {
+        try {
+            R<?> result = userService.register(userInfo);
+            System.out.println("888888888"+result);
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return R.error(500, "服务器内部错误: " + e.getMessage());
+        }
     }
 
     // 用户登录

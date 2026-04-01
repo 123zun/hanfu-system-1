@@ -9,6 +9,7 @@ import com.server.user.entity.UserInfo;
 import com.server.user.mapper.UserMapper;
 import com.server.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
@@ -28,46 +29,42 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R<?> register(UserInfo userInfo) {
-        // 检查用户名是否已存在
-        Long count = userMapper.selectCount(
-                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getUsername, userInfo.getUsername())
-        );
-        if (count > 0) {
-            return R.error("用户名已存在");
-        }
+        try {
+            // 1. 设置创建时间和更新时间
+            LocalDateTime now = LocalDateTime.now();
+            userInfo.setCreateTime(now);
+            userInfo.setUpdateTime(now);
 
-        // 检查邮箱是否已存在
-        if (StringUtils.hasText(userInfo.getEmail())) {
-            count = userMapper.selectCount(
-                    new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getEmail, userInfo.getEmail())
-            );
-            if (count > 0) {
-                return R.error("邮箱已存在");
+            // 2. 密码加密（如果密码是明文）
+            if (StringUtils.hasText(userInfo.getPassword())) {
+                userInfo.setPassword(encryptPassword(userInfo.getPassword()));
             }
-        }
 
-        // 检查手机号是否已存在
-        if (StringUtils.hasText(userInfo.getPhone())) {
-            count = userMapper.selectCount(
-                    new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getPhone, userInfo.getPhone())
-            );
-            if (count > 0) {
-                return R.error("手机号已存在");
+            // 3. 尝试插入（让数据库唯一约束来保证唯一性）
+            int result = userMapper.insert(userInfo);
+
+            if (result > 0) {
+                userInfo.setPassword(null);
+                return R.success("注册成功", userInfo);
             }
+
+            return R.error("注册失败");
+
+        } catch (DuplicateKeyException e) {
+            // 捕获唯一键冲突异常，返回友好提示
+            String message = e.getMessage();
+            if (message.contains("uk_username")) {
+                return R.error("用户名已存在");
+            } else if (message.contains("uk_email")) {
+                return R.error("邮箱已被注册");
+            } else if (message.contains("uk_phone")) {
+                return R.error("手机号已被注册");
+            }
+            return R.error("注册失败，请重试");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return R.error("服务器内部错误");
         }
-
-        // 加密密码
-        userInfo.setPassword(encryptPassword(userInfo.getPassword()));
-
-        // 保存用户（createTime和updateTime会自动填充）
-        int result = userMapper.insert(userInfo);
-        if (result > 0) {
-            // 返回时隐藏密码
-            userInfo.setPassword(null);
-            return R.success("注册成功", userInfo);
-        }
-
-        return R.error("注册失败");
     }
 
     @Override

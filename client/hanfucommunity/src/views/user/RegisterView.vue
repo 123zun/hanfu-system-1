@@ -33,6 +33,7 @@
                   placeholder="请输入用户名"
                   clearable
                   @input="validateUsername"
+                  @blur="validateUsername"
               />
             </div>
             <div v-if="usernameError" class="error-message">{{ usernameError }}</div>
@@ -49,6 +50,7 @@
                   placeholder="请输入邮箱地址"
                   clearable
                   @input="validateEmail"
+                  @blur="validateEmail"
               />
             </div>
             <div v-if="emailError" class="error-message">{{ emailError }}</div>
@@ -65,6 +67,7 @@
                   placeholder="请输入手机号码"
                   clearable
                   @input="validatePhone"
+                  @blur="validatePhone"
               />
             </div>
             <div v-if="phoneError" class="error-message">{{ phoneError }}</div>
@@ -78,11 +81,12 @@
             <div class="form-input-wrapper">
               <el-input
                   v-model="registerForm.password"
-                  :type="showPassword ? 'text' : 'password'"
+                  type="password"
                   placeholder="请输入密码（6-20位）"
                   clearable
                   show-password
                   @input="validatePassword"
+                  @blur="validatePassword"
               />
             </div>
             <div v-if="passwordError" class="error-message">{{ passwordError }}</div>
@@ -104,11 +108,12 @@
             <div class="form-input-wrapper">
               <el-input
                   v-model="registerForm.confirmPassword"
-                  :type="showConfirmPassword ? 'text' : 'password'"
+                  type="password"
                   placeholder="请再次输入密码"
                   clearable
                   show-password
                   @input="validateConfirmPassword"
+                  @blur="validateConfirmPassword"
               />
             </div>
             <div v-if="confirmPasswordError" class="error-message">{{ confirmPasswordError }}</div>
@@ -128,7 +133,7 @@
           </div>
 
           <!-- 注册按钮 -->
-          <button type="submit" class="register-btn" :disabled="loading || !isFormValid">
+          <button type="submit" class="register-btn" @click="handleRegister">
             {{ loading ? '注册中...' : '立即注册' }}
           </button>
         </form>
@@ -149,14 +154,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { register as registerApi } from '@/api/modules/user'
 
 const router = useRouter()
 
 const loading = ref(false)
-const showPassword = ref(false)
-const showConfirmPassword = ref(false)
+// 添加标志，防止注册成功后继续验证
+let isSubmitting = false
+let isSuccess = false
+
 const registerForm = reactive({
   username: '',
   email: '',
@@ -199,23 +208,13 @@ const getStrengthClass = (index) => {
   return ''
 }
 
-// 验证表单是否有效
-const isFormValid = computed(() => {
-  return registerForm.username &&
-      registerForm.email &&
-      registerForm.phone &&
-      registerForm.password &&
-      registerForm.confirmPassword &&
-      registerForm.gender &&
-      !usernameError.value &&
-      !emailError.value &&
-      !phoneError.value &&
-      !passwordError.value &&
-      !confirmPasswordError.value
-})
-
-// 验证用户名（可以包含中文）
+// 验证用户名 - 添加防重复验证标志
 const validateUsername = () => {
+  // 如果正在提交或已成功，不进行验证
+  if (isSubmitting || isSuccess) {
+    return
+  }
+
   const username = registerForm.username
   if (!username) {
     usernameError.value = '用户名不能为空'
@@ -228,6 +227,8 @@ const validateUsername = () => {
 
 // 验证邮箱
 const validateEmail = () => {
+  if (isSubmitting || isSuccess) return
+
   const email = registerForm.email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -242,6 +243,8 @@ const validateEmail = () => {
 
 // 验证手机号
 const validatePhone = () => {
+  if (isSubmitting || isSuccess) return
+
   const phone = registerForm.phone
   const phoneRegex = /^1[3-9]\d{9}$/
 
@@ -256,6 +259,8 @@ const validatePhone = () => {
 
 // 验证密码
 const validatePassword = () => {
+  if (isSubmitting || isSuccess) return
+
   const password = registerForm.password
   if (!password) {
     passwordError.value = '密码不能为空'
@@ -268,6 +273,8 @@ const validatePassword = () => {
 
 // 验证确认密码
 const validateConfirmPassword = () => {
+  if (isSubmitting || isSuccess) return
+
   const confirm = registerForm.confirmPassword
   if (!confirm) {
     confirmPasswordError.value = '请确认密码'
@@ -280,19 +287,39 @@ const validateConfirmPassword = () => {
 
 // 处理注册
 const handleRegister = async () => {
-  if (!registerFormRef.value) return
+  // 防止重复提交
+  if (loading.value || isSubmitting || isSuccess) {
+    console.log('正在处理中，跳过重复提交')
+    return
+  }
 
-  // 验证表单
-  try {
-    await registerFormRef.value.validate()
-  } catch (error) {
+  // 先验证所有字段
+  validateUsername()
+  validateEmail()
+  validatePhone()
+  validatePassword()
+  validateConfirmPassword()
+
+  // 如果有错误，不提交
+  if (usernameError.value || emailError.value || phoneError.value ||
+      passwordError.value || confirmPasswordError.value) {
     ElMessage.error('请填写完整的注册信息')
     return
   }
 
+  // 检查表单是否完整
+  if (!registerForm.username || !registerForm.email || !registerForm.phone ||
+      !registerForm.password || !registerForm.confirmPassword || !registerForm.gender) {
+    ElMessage.error('请填写所有必填项')
+    return
+  }
+
+  isSubmitting = true
   loading.value = true
 
   try {
+    console.log('发送注册请求:', registerForm)
+
     // 调用注册API
     const res = await registerApi({
       username: registerForm.username,
@@ -302,25 +329,59 @@ const handleRegister = async () => {
       gender: registerForm.gender
     })
 
-    ElMessage.success('注册成功！请登录')
+    console.log('注册响应:', res)
 
-    // 跳转到登录页
-    router.push({
-      path: '/login',
-      query: {
-        username: registerForm.username,
-        registered: 'true'
-      }
-    })
+    if (res.code === 200) {
+      // 标记为成功，防止后续验证
+      isSuccess = true
+
+      // 清除错误信息
+      usernameError.value = ''
+      emailError.value = ''
+      phoneError.value = ''
+      passwordError.value = ''
+      confirmPasswordError.value = ''
+
+      ElMessage.success(res.message || '注册成功！请登录')
+
+      // 延迟跳转，确保消息显示完整
+      setTimeout(() => {
+        // 跳转前清除标志
+        isSuccess = false
+        isSubmitting = false
+
+        router.push({
+          path: '/login',
+          query: {
+            username: registerForm.username,
+            registered: 'true'
+          }
+        })
+      }, 1500)
+    } else {
+      // 注册失败，重置标志
+      isSuccess = false
+      isSubmitting = false
+      ElMessage.error(res.message || '注册失败')
+    }
 
   } catch (error) {
-    // 错误已经在拦截器中处理
     console.error('注册失败:', error)
+    isSuccess = false
+    isSubmitting = false
+    ElMessage.error(error.message || '注册失败，请稍后重试')
   } finally {
     loading.value = false
   }
 }
+
+// 组件卸载前清理
+onBeforeUnmount(() => {
+  isSubmitting = false
+  isSuccess = false
+})
 </script>
+
 
 <style scoped>
 .register-container {

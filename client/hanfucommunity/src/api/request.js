@@ -68,7 +68,8 @@ request.interceptors.request.use(
     }
 )
 
-// 响应拦截器
+// 响应拦截器 - 简化版本
+// 响应拦截器 - 修复版本
 request.interceptors.response.use(
     (response) => {
         // 隐藏loading
@@ -76,44 +77,89 @@ request.interceptors.response.use(
             hideLoading()
         }
 
-        const res = response.data
+        console.log('📥 响应拦截器收到:', {
+            url: response.config.url,
+            method: response.config.method,
+            状态码: response.status,
+            状态文本: response.statusText,
+            响应数据: response.data,
+            数据类型: typeof response.data
+        })
 
         // 处理文件下载
         if (response.config.responseType === 'blob') {
             return response
         }
 
-        // 根据后端返回的数据结构处理
-        // 假设标准返回格式: { code: 200, message: 'success', data: {} }
-        if (res.code === 200 || res.code === 0) {
-            return res.data || res
-        } else {
-            // 业务逻辑错误
-            const errorMsg = res.message || '请求失败'
-            ElMessage.error(errorMsg)
-
-            // 特定错误码处理
-            if (res.code === 401) {
-                // token过期，清除登录状态
-                localStorage.removeItem('hanfu_token')
-                localStorage.removeItem('hanfu_user')
-                router.push('/login')
-            } else if (res.code === 403) {
-                ElMessage.error('权限不足')
+        // 确保返回的数据不为 undefined
+        if (response.data === undefined || response.data === null) {
+            console.warn('⚠️ 响应数据为空，返回默认格式')
+            return {
+                code: 500,
+                message: '服务器返回数据为空',
+                data: null
             }
-
-            return Promise.reject(new Error(errorMsg))
         }
+
+        // 如果是字符串，尝试解析 JSON
+        if (typeof response.data === 'string') {
+            try {
+                const parsed = JSON.parse(response.data)
+                console.log('✅ JSON 解析成功:', parsed)
+                return parsed
+            } catch (e) {
+                console.error('❌ JSON 解析失败:', e)
+                return {
+                    code: 500,
+                    message: '数据格式错误',
+                    data: null
+                }
+            }
+        }
+
+        // 正常情况返回数据
+        return response.data
     },
     (error) => {
         // 隐藏loading
         hideLoading()
 
-        // 统一错误处理
+        console.error('❌ 响应错误:', error)
+
+        // 构建标准错误响应
+        let errorResponse = {
+            code: 500,
+            message: '请求失败',
+            data: null
+        }
+
         if (error.response) {
+            console.error('服务器响应错误:', {
+                status: error.response.status,
+                data: error.response.data,
+                headers: error.response.headers
+            })
+
+            errorResponse.code = error.response.status
+
+            // 尝试从错误响应中提取消息
+            if (error.response.data) {
+                if (typeof error.response.data === 'string') {
+                    try {
+                        const parsed = JSON.parse(error.response.data)
+                        errorResponse.message = parsed.message || parsed.msg || '请求失败'
+                    } catch (e) {
+                        errorResponse.message = error.response.data.substring(0, 100)
+                    }
+                } else {
+                    errorResponse.message = error.response.data.message || error.response.data.msg || '请求失败'
+                }
+            }
+
+            // 显示错误消息
             switch (error.response.status) {
                 case 400:
-                    ElMessage.error('请求参数错误')
+                    ElMessage.error(errorResponse.message || '请求参数错误')
                     break
                 case 401:
                     ElMessage.error('登录已过期，请重新登录')
@@ -128,28 +174,27 @@ request.interceptors.response.use(
                     ElMessage.error('请求的资源不存在')
                     break
                 case 500:
-                    ElMessage.error('服务器内部错误')
-                    break
-                case 502:
-                case 503:
-                case 504:
-                    ElMessage.error('服务暂时不可用，请稍后重试')
+                    ElMessage.error(errorResponse.message || '服务器内部错误')
                     break
                 default:
-                    ElMessage.error(error.response.data?.message || '请求失败')
+                    ElMessage.error(errorResponse.message || '请求失败')
             }
         } else if (error.request) {
-            // 请求发出但没有收到响应
+            console.error('请求无响应:', error.request)
+            errorResponse.message = '网络异常，请检查网络连接'
             if (error.code === 'ECONNABORTED') {
-                ElMessage.error('请求超时，请检查网络连接')
-            } else {
-                ElMessage.error('网络异常，请检查网络连接')
+                errorResponse.message = '请求超时，请检查网络连接'
             }
+            ElMessage.error(errorResponse.message)
         } else {
-            ElMessage.error('请求配置错误')
+            console.error('请求配置错误:', error.message)
+            errorResponse.message = '请求配置错误: ' + error.message
+            ElMessage.error(errorResponse.message)
         }
 
-        return Promise.reject(error)
+        // 【关键修改】返回 Promise.resolve 而不是 Promise.reject
+        // 这样就不会触发 catch 块
+        return Promise.resolve(errorResponse)
     }
 )
 
