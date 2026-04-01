@@ -1,52 +1,59 @@
 package com.server.user.service;
 
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.server.common.R;
 import com.server.user.entity.UserInfo;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
 
-public interface UserService extends IService<UserInfo> {
+public interface UserService {
 
     /**
      * 用户注册
      */
-    UserInfo register(UserInfo user);
+    R<?> register(UserInfo userInfo);
 
     /**
      * 用户登录
      */
-    String login(String username, String password);
+    R<?> login(String username, String password);
 
     /**
-     * 获取当前用户信息
+     * 根据ID获取用户信息
      */
-    UserInfo getCurrentUser();
-
-    /**
-     * 根据用户名查询用户
-     */
-    UserInfo getUserByUsername(String username);
+    R<?> getUserInfo(Long id);
 
     /**
      * 更新用户信息
      */
-    boolean updateUserInfo(UserInfo user);
+    R<?> updateUserInfo(UserInfo userInfo);
 
     /**
      * 修改密码
      */
-    boolean changePassword(String oldPassword, String newPassword);
+    R<?> changePassword(Long userId, String oldPassword, String newPassword);
 
     /**
-     * 检查用户名是否已存在
+     * 上传头像
      */
-    boolean checkUsernameExists(String username);
+    R<?> uploadAvatar(Long userId, MultipartFile file);
 
     /**
-     * 检查邮箱是否已存在
+     * 检查用户名是否可用
      */
-    boolean checkEmailExists(String email);
+    R<?> checkUsername(String username);
 
     /**
-     * 检查手机号是否已存在
+     * 检查邮箱是否可用
      */
-    boolean checkPhoneExists(String phone);
+    R<?> checkEmail(String email);
+
+    /**
+     * 获取用户列表（分页+条件查询）
+     */
+    R<?> getUserList(Map<String, Object> params);
+
+    /**
+     * 删除用户
+     */
+    R<?> deleteUser(Long id);
 }

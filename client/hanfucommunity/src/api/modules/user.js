@@ -3,7 +3,7 @@ import request from '../request'
 // 用户登录
 export const login = (data) => {
     return request({
-        url: '/auth/login',
+        url: '/user/login',
         method: 'POST',
         data
     })
@@ -12,7 +12,7 @@ export const login = (data) => {
 // 用户注册
 export const register = (data) => {
     return request({
-        url: '/auth/register',
+        url: '/user/register',
         method: 'POST',
         data
     })
@@ -63,7 +63,7 @@ export const uploadAvatar = (file) => {
 // 退出登录
 export const logout = () => {
     return request({
-        url: '/auth/logout',
+        url: '/user/logout',
         method: 'POST'
     })
 }

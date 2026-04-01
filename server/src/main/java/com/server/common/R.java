@@ -1,4 +1,5 @@
-package com.server.utils;
+
+package com.server.common;
 
 import lombok.Data;
 import java.io.Serializable;
@@ -18,8 +19,9 @@ public class R<T> implements Serializable {
         this.data = data;
     }
 
+    // 成功返回
     public static <T> R<T> success() {
-        return new R<>(200, "success", null);
+        return new R<>(200, "操作成功", null);
     }
 
     public static <T> R<T> success(String message) {
@@ -27,15 +29,16 @@ public class R<T> implements Serializable {
     }
 
     public static <T> R<T> success(T data) {
-        return new R<>(200, "success", data);
+        return new R<>(200, "操作成功", data);
     }
 
     public static <T> R<T> success(String message, T data) {
         return new R<>(200, message, data);
     }
 
+    // 错误返回
     public static <T> R<T> error() {
-        return new R<>(500, "error", null);
+        return new R<>(500, "系统错误", null);
     }
 
     public static <T> R<T> error(String message) {
