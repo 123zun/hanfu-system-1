@@ -155,31 +155,22 @@ const handleLogin = async () => {
       // 新的响应格式: { code: 200, message: 'xxx', data: {token: 'xxx', userInfo: {...}} }
       if (response && (response.code === 200 || response.code === 0)) {
         const data = response.data || {}
-        const token = data.token
         const userInfo = data.userInfo || data
 
-        if (token) {
-          // 保存到localStorage
-          localStorage.setItem('hanfu_token', token)
-          localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
 
-          // 如果记住我
-          if (loginForm.remember) {
-            localStorage.setItem('remember_me', 'true')
-          } else {
-            localStorage.removeItem('remember_me')
-          }
+        // 保存到localStorage
+        localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
 
-          console.log('登录成功，token已保存')
-          ElMessage.success(response.message || '登录成功！')
-
-          // 跳转到首页或来源页面
-          const redirect = route.query.redirect || '/'
-          router.push(redirect)
-        } else {
-          console.warn('登录成功但未返回token')
-          ElMessage.success(response.message || '登录成功！')
+        // 保存用户ID
+        if (userInfo.id) {
+          localStorage.setItem('current_user_id', userInfo.id)
         }
+
+        ElMessage.success('登录成功！')
+
+        // 跳转到主页面
+        console.log("准备跳转");
+        router.push('/main')
       } else {
         // 处理其他code
         ElMessage.error(response?.message || '登录失败')

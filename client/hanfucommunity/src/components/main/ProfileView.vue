@@ -1,0 +1,862 @@
+<template>
+  <div class="profile-view">
+    <!-- 个人中心头部 -->
+    <div class="profile-header">
+      <div class="profile-banner">
+        <div class="banner-overlay"></div>
+        <div class="profile-avatar">
+          <img :src="userInfo.avatar || defaultAvatar" alt="用户头像" />
+          <div class="avatar-upload" @click="triggerAvatarUpload">
+            <el-icon><Camera /></el-icon>
+            <span>更换头像</span>
+          </div>
+        </div>
+        <input
+            ref="avatarInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="handleAvatarSelect"
+        />
+      </div>
+
+      <div class="profile-info">
+        <h2 class="profile-name">{{ userInfo.username || '汉服爱好者' }}</h2>
+        <p class="profile-bio">{{ userInfo.bio || '传承华夏文明，弘扬汉服文化' }}</p>
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ userInfo.postCount || 0 }}</span>
+            <span class="stat-label">帖子</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ userInfo.followers || 0 }}</span>
+            <span class="stat-label">关注者</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ userInfo.following || 0 }}</span>
+            <span class="stat-label">关注中</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ userInfo.collections || 0 }}</span>
+            <span class="stat-label">收藏</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 内容区域 -->
+    <div class="profile-content">
+      <!-- 左侧：个人信息表单 -->
+      <div class="info-form">
+        <h3 class="form-title">个人信息</h3>
+
+        <el-form
+            ref="profileFormRef"
+            :model="profileForm"
+            :rules="profileRules"
+            label-width="100px"
+            class="profile-form"
+        >
+          <el-form-item label="用户名" prop="username">
+            <el-input
+                v-model="profileForm.username"
+                placeholder="请输入用户名"
+                clearable
+            />
+          </el-form-item>
+
+          <el-form-item label="邮箱" prop="email">
+            <el-input
+                v-model="profileForm.email"
+                placeholder="请输入邮箱地址"
+                clearable
+            />
+          </el-form-item>
+
+          <el-form-item label="手机号" prop="phone">
+            <el-input
+                v-model="profileForm.phone"
+                placeholder="请输入手机号码"
+                clearable
+            />
+          </el-form-item>
+
+          <el-form-item label="性别" prop="gender">
+            <el-radio-group v-model="profileForm.gender">
+              <el-radio label="male">男</el-radio>
+              <el-radio label="female">女</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="出生日期">
+            <el-date-picker
+                v-model="profileForm.birthday"
+                type="date"
+                placeholder="选择出生日期"
+                style="width: 100%"
+            />
+          </el-form-item>
+
+          <el-form-item label="所在地区">
+            <el-cascader
+                v-model="profileForm.region"
+                :options="regionOptions"
+                placeholder="请选择所在地区"
+                style="width: 100%"
+            />
+          </el-form-item>
+
+          <el-form-item label="个人简介" prop="bio">
+            <el-input
+                v-model="profileForm.bio"
+                type="textarea"
+                :rows="4"
+                placeholder="介绍一下自己吧..."
+                maxlength="200"
+                show-word-limit
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button
+                type="primary"
+                :loading="saving"
+                @click="handleSaveProfile"
+                class="save-btn"
+            >
+              {{ saving ? '保存中...' : '保存修改' }}
+            </el-button>
+            <el-button @click="resetForm">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 右侧：其他信息 -->
+      <div class="additional-info">
+        <div class="info-card">
+          <h3 class="info-title">账号信息</h3>
+          <div class="info-item">
+            <span class="item-label">用户ID：</span>
+            <span class="item-value">{{ userInfo.id || 'N/A' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="item-label">注册时间：</span>
+            <span class="item-value">{{ formatDate(userInfo.createTime) || '2026-01-01' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="item-label">最后登录：</span>
+            <span class="item-value">{{ formatDate(userInfo.lastLogin) || '刚刚' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="item-label">账号状态：</span>
+            <span class="item-value status-active">正常</span>
+          </div>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-title">安全设置</h3>
+          <el-button type="warning" class="security-btn" @click="handleChangePassword">
+            <el-icon><Lock /></el-icon>
+            修改密码
+          </el-button>
+          <el-button type="info" class="security-btn">
+            <el-icon><Message /></el-icon>
+            绑定邮箱
+          </el-button>
+          <el-button type="info" class="security-btn">
+            <el-icon><Iphone /></el-icon>
+            绑定手机
+          </el-button>
+        </div>
+
+        <div class="info-card">
+          <h3 class="info-title">我的成就</h3>
+          <div class="achievements">
+            <div class="achievement-item" v-for="achievement in achievements" :key="achievement.id">
+              <el-icon :class="achievement.iconClass"><component :is="achievement.icon" /></el-icon>
+              <div class="achievement-info">
+                <span class="achievement-name">{{ achievement.name }}</span>
+                <span class="achievement-desc">{{ achievement.description }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 头像上传对话框 -->
+    <el-dialog
+        v-model="avatarDialogVisible"
+        title="更换头像"
+        width="500px"
+        align-center
+    >
+      <div class="avatar-upload-dialog">
+        <div v-if="!selectedAvatar" class="upload-area" @click="triggerAvatarUpload">
+          <el-icon class="upload-icon"><Upload /></el-icon>
+          <p>点击选择图片</p>
+          <p class="upload-tips">支持 JPG、PNG、GIF 格式，大小不超过 5MB</p>
+        </div>
+
+        <div v-else class="preview-area">
+          <img :src="avatarPreview" class="preview-image" />
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="avatarDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="uploading" @click="confirmAvatarUpload">
+            {{ uploading ? '上传中...' : '确定' }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, reactive } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  Camera,
+  Upload,
+  Trophy,
+  Star,
+  Medal,
+  Lock,
+  Message,
+  Iphone
+} from '@element-plus/icons-vue'
+import { getUserInfo, updateUserInfo, uploadAvatar } from '@/api/modules/user'
+
+// 默认头像
+const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.jpg'
+
+// 表单引用
+const profileFormRef = ref()
+const avatarInput = ref(null)
+
+// 用户信息
+const userInfo = ref({})
+// 表单数据
+const profileForm = reactive({
+  username: '',
+  email: '',
+  phone: '',
+  gender: 'male',
+  birthday: '',
+  region: [],
+  bio: ''
+})
+
+// 地区选项
+const regionOptions = [
+  {
+    value: 'beijing',
+    label: '北京',
+    children: [
+      { value: 'dongcheng', label: '东城区' },
+      { value: 'xicheng', label: '西城区' }
+    ]
+  },
+  {
+    value: 'sichuan',
+    label: '四川',
+    children: [
+      { value: 'chengdu', label: '成都' },
+      { value: 'mianyang', label: '绵阳' }
+    ]
+  }
+]
+
+// 成就列表
+const achievements = [
+  { id: 1, name: '汉服新人', description: '注册用户', icon: Trophy, iconClass: 'gold' },
+  { id: 2, name: '活跃用户', description: '发帖超过10篇', icon: Star, iconClass: 'silver' },
+  { id: 3, name: '文化传承者', description: '参加3次活动', icon: Medal, iconClass: 'bronze' },
+  { id: 4, name: '汉服爱好者', description: '连续登录30天', icon: 'StarFilled', iconClass: 'gold' }
+]
+
+// 头像上传相关
+const avatarDialogVisible = ref(false)
+const selectedAvatar = ref(null)
+const avatarPreview = ref('')
+const uploading = ref(false)
+const saving = ref(false)
+
+// 表单验证规则
+const profileRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+  ]
+}
+
+// 页面加载
+onMounted(() => {
+  loadUserProfile()
+})
+
+// 加载用户信息
+const loadUserProfile = async () => {
+  try {
+    const userId = localStorage.getItem('current_user_id')
+    if (!userId) {
+      ElMessage.error('请先登录')
+      return
+    }
+
+    const response = await getUserInfo(userId)
+    if (response && (response.code === 200 || response.code === 0)) {
+      const data = response.data || response
+      userInfo.value = data
+
+      // 填充表单
+      Object.assign(profileForm, {
+        username: data.username || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        gender: data.gender || 'male',
+        bio: data.bio || ''
+      })
+    }
+  } catch (error) {
+    console.error('加载用户信息失败:', error)
+  }
+}
+
+// 触发头像上传
+const triggerAvatarUpload = () => {
+  avatarDialogVisible.value = true
+  selectedAvatar.value = null
+  avatarPreview.value = ''
+  if (avatarInput.value) {
+    avatarInput.value.value = ''
+  }
+}
+
+// 处理头像选择
+const handleAvatarSelect = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (!validateImageFile(file)) return
+
+  selectedAvatar.value = file
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file)
+
+  event.target.value = ''
+}
+
+// 验证图片文件
+const validateImageFile = (file) => {
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    ElMessage.error('请选择图片文件（JPG/PNG/GIF/BMP/WebP）')
+    return false
+  }
+
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    ElMessage.error('图片大小不能超过5MB')
+    return false
+  }
+
+  return true
+}
+
+// 确认上传头像
+const confirmAvatarUpload = async () => {
+  if (!selectedAvatar.value) {
+    ElMessage.error('请先选择图片')
+    return
+  }
+
+  const userId = localStorage.getItem('current_user_id')
+  if (!userId) {
+    ElMessage.error('用户ID不存在')
+    return
+  }
+
+  uploading.value = true
+
+  try {
+    const response = await uploadAvatar(userId, selectedAvatar.value)
+
+    if (response && (response.code === 200 || response.code === 0)) {
+      const avatarUrl = response.data?.avatarUrl
+
+      if (avatarUrl) {
+        // 更新本地用户信息
+        userInfo.value.avatar = avatarUrl
+        ElMessage.success('头像上传成功')
+        avatarDialogVisible.value = false
+
+        // 更新localStorage
+        const userStr = localStorage.getItem('hanfu_user')
+        if (userStr) {
+          const user = JSON.parse(userStr)
+          user.avatar = avatarUrl
+          localStorage.setItem('hanfu_user', JSON.stringify(user))
+        }
+      } else {
+        throw new Error('未返回头像URL')
+      }
+    } else {
+      throw new Error(response?.message || '上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+  } finally {
+    uploading.value = false
+  }
+}
+
+// 保存个人信息
+const handleSaveProfile = async () => {
+  if (!profileFormRef.value) return
+
+  try {
+    await profileFormRef.value.validate()
+
+    saving.value = true
+
+    const userId = localStorage.getItem('current_user_id')
+    if (!userId) {
+      ElMessage.error('用户ID不存在')
+      return
+    }
+
+    const response = await updateUserInfo({
+      id: userId,
+      ...profileForm
+    })
+
+    if (response && (response.code === 200 || response.code === 0)) {
+      ElMessage.success('个人信息更新成功')
+
+      // 更新本地用户信息
+      Object.assign(userInfo.value, profileForm)
+
+      // 更新localStorage
+      const userStr = localStorage.getItem('hanfu_user')
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        Object.assign(user, profileForm)
+        localStorage.setItem('hanfu_user', JSON.stringify(user))
+      }
+    } else {
+      ElMessage.error(response?.message || '更新失败')
+    }
+
+  } catch (error) {
+    console.error('保存个人信息失败:', error)
+  } finally {
+    saving.value = false
+  }
+}
+
+// 重置表单
+const resetForm = () => {
+  Object.assign(profileForm, {
+    username: userInfo.value.username || '',
+    email: userInfo.value.email || '',
+    phone: userInfo.value.phone || '',
+    gender: userInfo.value.gender || 'male',
+    bio: userInfo.value.bio || ''
+  })
+}
+
+// 修改密码
+const handleChangePassword = () => {
+  ElMessage.info('修改密码功能开发中...')
+}
+
+// 格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  } catch (e) {
+    return dateString
+  }
+}
+</script>
+
+<style scoped>
+.profile-view {
+  min-height: 600px;
+}
+
+/* 个人中心头部 */
+.profile-header {
+  position: relative;
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  border-radius: 15px 15px 0 0;
+  padding: 40px;
+  margin-bottom: 30px;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.profile-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('https://images.unsplash.com/photo-1544717305-99670f9c28f4?auto=format&fit=crop&w=1200&q=80');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+}
+
+.banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.profile-avatar {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid white;
+  overflow: hidden;
+  margin: 0 auto 20px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-upload {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.profile-avatar:hover .avatar-upload {
+  opacity: 1;
+}
+
+.avatar-upload .el-icon {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}
+
+.profile-info {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: white;
+}
+
+.profile-name {
+  font-size: 1.8rem;
+  margin: 0 0 10px 0;
+  font-weight: bold;
+}
+
+.profile-bio {
+  font-size: 1rem;
+  margin: 0 0 20px 0;
+  opacity: 0.9;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.3s;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.stat-item:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stat-number {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* 内容区域 */
+.profile-content {
+  display: flex;
+  gap: 30px;
+  padding: 0 30px 30px;
+  flex-wrap: wrap;
+}
+
+.info-form {
+  flex: 2;
+  min-width: 300px;
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0e6d6;
+}
+
+.form-title {
+  color: #333;
+  font-size: 1.3rem;
+  margin: 0 0 20px 0;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0e6d6;
+  position: relative;
+}
+
+.form-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: #d4af37;
+}
+
+.profile-form :deep(.el-form-item__label) {
+  color: #666;
+  font-weight: 500;
+}
+
+.additional-info {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0e6d6;
+}
+
+.info-title {
+  color: #333;
+  font-size: 1.1rem;
+  margin: 0 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0e6d6;
+}
+
+.info-item {
+  margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.item-label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.item-value {
+  color: #333;
+  font-weight: 500;
+}
+
+.status-active {
+  color: #52c41a;
+  font-weight: bold;
+}
+
+.security-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  justify-content: flex-start;
+  padding: 12px 15px;
+}
+
+.security-btn:last-child {
+  margin-bottom: 0;
+}
+
+.security-btn .el-icon {
+  margin-right: 8px;
+}
+
+.achievements {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f5f0;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  transition: transform 0.3s;
+}
+
+.achievement-item:hover {
+  transform: translateX(5px);
+  background: white;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.1);
+}
+
+.achievement-item .el-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.achievement-item .el-icon.gold {
+  color: #d4af37;
+}
+
+.achievement-item .el-icon.silver {
+  color: #c0c0c0;
+}
+
+.achievement-item .el-icon.bronze {
+  color: #cd7f32;
+}
+
+.achievement-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.achievement-name {
+  color: #333;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.achievement-desc {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  border: none;
+  padding: 10px 25px;
+  font-size: 1rem;
+  min-width: 120px;
+}
+
+.save-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+/* 头像上传对话框 */
+.avatar-upload-dialog {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-area {
+  text-align: center;
+  padding: 40px;
+  border: 2px dashed #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.upload-area:hover {
+  border-color: #d4af37;
+  background: #f8f5f0;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.upload-tips {
+  font-size: 0.9rem;
+  color: #999;
+  margin-top: 5px;
+}
+
+.preview-area {
+  width: 100%;
+  text-align: center;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #f0e6d6;
+}
+</style>

@@ -9,6 +9,15 @@ const routes = [
         meta: { title: '汉韵华章 - 汉服文化社区' }
     },
     {
+        path: '/main',
+        name: 'main',
+        component: () => import('@/views/MainView.vue'),
+        meta: {
+            title: '主页面',
+            requiresAuth: true
+        }
+    },
+    {
         path: '/login',
         name: 'login',
         component: () => import('@/views/user/LoginView.vue'),
