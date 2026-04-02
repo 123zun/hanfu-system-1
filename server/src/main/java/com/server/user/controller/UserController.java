@@ -23,7 +23,7 @@ public class UserController {
     private UserService userService;
 
     // 从配置文件中读取上传路径
-    @Value("${file.upload.path:uploads}")
+    @Value("${file.upload.path}")
     private String uploadPath;
 
     @Value("${server.port:8080}")
@@ -105,6 +105,7 @@ public class UserController {
     public R<?> uploadAvatar(
             @RequestParam("userId") Long userId,
             @RequestParam("file") MultipartFile file) {
+        System.out.println("上传文件: " + file.getOriginalFilename());
         try {
             // 验证文件
             if (file.isEmpty()) {
@@ -138,20 +139,30 @@ public class UserController {
                 return R.error("只支持上传图片文件（JPG, PNG, GIF, BMP, WebP）");
             }
 
-            // 验证文件大小（限制5MB）
-            long maxFileSize = 5 * 1024 * 1024; // 5MB
+            // 验证文件大小（限制10MB）
+            long maxFileSize = 10 * 1024 * 1024; // 10MB
             if (file.getSize() > maxFileSize) {
-                return R.error("文件大小不能超过5MB");
+                return R.error("文件大小不能超过10MB");
             }
 
-            // 创建上传目录
-            String avatarDir = uploadPath + "/avatars";
+            // ========== 修改这里：使用 static 目录 ==========
+            // 获取项目根目录
+            String projectPath = System.getProperty("user.dir");
+            // 创建上传目录：项目根目录/src/main/resources/static/uploads/avatars/
+            String avatarDir = projectPath + File.separator +"server"+ File.separator + "src" + File.separator + "main"
+                    + File.separator + "resources" + File.separator + "static"
+                    + File.separator + "uploads" + File.separator + "avatars";
+
             File dir = new File(avatarDir);
+
+            System.out.println("上传目录路径: " + dir.getAbsolutePath());
+
             if (!dir.exists()) {
                 boolean created = dir.mkdirs();
                 if (!created) {
-                    return R.error("创建上传目录失败");
+                    return R.error("创建上传目录失败: " + dir.getAbsolutePath());
                 }
+                System.out.println("创建目录成功: " + dir.getAbsolutePath());
             }
 
             // 生成唯一文件名
@@ -162,8 +173,12 @@ public class UserController {
             File destFile = new File(dir, newFilename);
             file.transferTo(destFile);
 
-            // 构建访问URL
-            String avatarUrl = "/uploads/avatars/" + newFilename;
+            System.out.println("文件保存成功: " + destFile.getAbsolutePath());
+
+            // 构建访问URL（相对于static目录）
+            //String avatarUrl = "/uploads/avatars/" + newFilename;
+            String baseUrl = "http://localhost:8080";
+            String avatarUrl = baseUrl + "/uploads/avatars/" + newFilename;
 
             // 更新用户头像信息
             UserInfo userInfo = new UserInfo();
@@ -179,7 +194,9 @@ public class UserController {
                 return R.success("头像上传成功", data);
             } else {
                 // 如果更新数据库失败，删除已上传的文件
-                destFile.delete();
+                if (destFile.exists()) {
+                    destFile.delete();
+                }
                 return R.error("更新用户信息失败");
             }
 
@@ -190,12 +207,5 @@ public class UserController {
             e.printStackTrace();
             return R.error("上传过程中发生错误: " + e.getMessage());
         }
-    }
-
-    // 获取默认头像URL
-    @GetMapping("/avatar/default")
-    public R<?> getDefaultAvatar() {
-        String defaultAvatar = "/static/uploads/avatars/default.png";
-        return R.success("获取默认头像成功", Map.of("avatarUrl", defaultAvatar));
     }
 }

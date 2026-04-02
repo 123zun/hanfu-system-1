@@ -515,17 +515,30 @@ const loadUserProfile = async () => {
 
 // 触发头像上传
 const triggerAvatarUpload = () => {
-  avatarDialogVisible.value = true
-  selectedAvatar.value = null
-  avatarPreview.value = ''
-  if (avatarInput.value) {
-    avatarInput.value.value = ''
+  // 创建隐藏的文件输入元素
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = 'image/*'
+  fileInput.style.display = 'none'
+
+  // 添加change事件监听
+  fileInput.onchange = (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    handleAvatarSelect(file)
+
+    // 清理
+    document.body.removeChild(fileInput)
   }
+
+  // 添加到页面并触发点击
+  document.body.appendChild(fileInput)
+  fileInput.click()
 }
 
 // 处理头像选择
-const handleAvatarSelect = (event) => {
-  const file = event.target.files[0]
+const handleAvatarSelect = (file) => {
   if (!file) return
 
   if (!validateImageFile(file)) return
@@ -538,7 +551,10 @@ const handleAvatarSelect = (event) => {
   }
   reader.readAsDataURL(file)
 
-  event.target.value = ''
+  // 自动打开对话框（如果还没打开的话）
+  if (!avatarDialogVisible.value) {
+    avatarDialogVisible.value = true
+  }
 }
 
 // 验证图片文件
@@ -574,32 +590,63 @@ const confirmAvatarUpload = async () => {
   uploading.value = true
 
   try {
-    const response = await uploadAvatar(userId, selectedAvatar.value)
+    console.log('开始上传头像，用户ID:', userId, '文件:', selectedAvatar.value.name)
+
+    // 创建FormData
+    const formData = new FormData()
+    formData.append('userId', userId)
+    formData.append('file', selectedAvatar.value)
+
+    console.log('FormData内容:', {
+      userId: userId,
+      fileName: selectedAvatar.value.name,
+      fileSize: selectedAvatar.value.size,
+      fileType: selectedAvatar.value.type
+    })
+
+    // 调用上传接口
+    const response = await uploadAvatar(formData)
+
+    console.log('头像上传响应:', response)
 
     if (response && (response.code === 200 || response.code === 0)) {
-      const avatarUrl = response.data?.avatarUrl
+      const avatarUrl = response.data?.avatarUrl || response.avatarUrl || response.data?.avatar
+      console.log('获取到头像URL:', avatarUrl)
 
       if (avatarUrl) {
-        // 更新本地用户信息
+        // 更新用户信息中的头像
         userInfo.value.avatar = avatarUrl
-        ElMessage.success('头像上传成功')
+
+        // 更新表单中的头像
+        if (profileForm.avatar !== undefined) {
+          profileForm.avatar = avatarUrl
+        }
+
+        ElMessage.success(response.message || '头像上传成功')
+
         avatarDialogVisible.value = false
 
-        // 更新localStorage
+        // 更新localStorage中的用户信息
         const userStr = localStorage.getItem('hanfu_user')
         if (userStr) {
           const user = JSON.parse(userStr)
           user.avatar = avatarUrl
           localStorage.setItem('hanfu_user', JSON.stringify(user))
         }
+
+        // 触发页面刷新显示新头像
+        setTimeout(() => {
+          location.reload()
+        }, 500)
       } else {
-        throw new Error('未返回头像URL')
+        ElMessage.error('未返回头像URL')
       }
     } else {
-      throw new Error(response?.message || '上传失败')
+      ElMessage.error(response?.message || '头像上传失败')
     }
   } catch (error) {
     console.error('头像上传失败:', error)
+    ElMessage.error('头像上传失败: ' + (error.message || '请稍后重试'))
   } finally {
     uploading.value = false
   }

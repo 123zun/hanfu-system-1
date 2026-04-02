@@ -53,12 +53,9 @@ export const logout = () => {
     })
 }
 
+// src/api/modules/user.js
 // 上传头像
-export const uploadAvatar = (userId, file) => {
-    const formData = new FormData()
-    formData.append('userId', userId)
-    formData.append('file', file)
-
+export const uploadAvatar = (formData) => {
     return request({
         url: '/user/avatar',
         method: 'POST',
@@ -66,14 +63,6 @@ export const uploadAvatar = (userId, file) => {
         headers: {
             'Content-Type': 'multipart/form-data'
         },
-        showLoading: false  // 上传时不显示全局loading
-    })
-}
-
-// 获取默认头像
-export const getDefaultAvatar = () => {
-    return request({
-        url: '/user/avatar/default',
-        method: 'GET'
+        showLoading: false
     })
 }
