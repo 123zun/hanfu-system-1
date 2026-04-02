@@ -157,14 +157,11 @@ public class UserServiceImpl implements UserService {
         }
 
         // 验证原密码
-        String encryptedOldPassword = encryptPassword(oldPassword);
-        if (!encryptedOldPassword.equals(userInfo.getPassword())) {
+        if (!oldPassword.equals(userInfo.getPassword())) {
             return R.error("原密码错误");
         }
 
-        // 更新密码
-        String encryptedNewPassword = encryptPassword(newPassword);
-        int result = userMapper.updatePassword(userId, encryptedNewPassword);
+        int result = userMapper.updatePassword(userId, newPassword);
 
         if (result > 0) {
             return R.success("密码修改成功");

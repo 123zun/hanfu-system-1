@@ -34,7 +34,6 @@ public class UserController {
     public R<?> register(@RequestBody UserInfo userInfo) {
         try {
             R<?> result = userService.register(userInfo);
-            System.out.println("888888888"+result);
             return result;
         } catch (Exception e) {
             e.printStackTrace();
@@ -65,7 +64,7 @@ public class UserController {
     // 修改密码
     @PostMapping("/password")
     public R<?> changePassword(@RequestBody Map<String, String> params) {
-        Long userId = Long.parseLong(params.get("userId"));
+        Long userId = Long.parseLong(params.get("id"));
         String oldPassword = params.get("oldPassword");
         String newPassword = params.get("newPassword");
         return userService.changePassword(userId, oldPassword, newPassword);

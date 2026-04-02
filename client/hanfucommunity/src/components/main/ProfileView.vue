@@ -152,7 +152,7 @@
 
         <div class="info-card">
           <h3 class="info-title">安全设置</h3>
-          <el-button type="warning" class="security-btn" @click="handleChangePassword">
+          <el-button type="warning" class="security-btn" @click="openPasswordDialog">
             <el-icon><Lock /></el-icon>
             修改密码
           </el-button>
@@ -179,6 +179,7 @@
         title="更换头像"
         width="500px"
         align-center
+        :lock-scroll="false"
     >
       <div class="avatar-upload-dialog">
         <div v-if="!selectedAvatar" class="upload-area" @click="triggerAvatarUpload">
@@ -208,6 +209,7 @@
       width="480px"
       align-center
       :close-on-click-modal="false"
+      :lock-scroll="false"
   >
     <div class="password-change-dialog">
       <div class="dialog-header">
@@ -320,7 +322,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive,computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Camera,
@@ -393,7 +395,86 @@ const profileRules = {
   ]
 }
 
+const passwordDialogVisible = ref(false)
+const changing = ref(false)
+const passwordStrength = ref(0)
 
+// 表单引用
+const passwordFormRef = ref()
+
+// 密码表单
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+// 验证原密码
+const validateOldPassword = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入原密码'))
+    return
+  }
+
+  // 与表单中的密码比对
+  if (value !== profileForm.password) {
+    callback(new Error('原密码不正确'))
+  } else {
+    callback()
+  }
+}
+
+// 验证新密码
+const validateNewPassword = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入新密码'))
+    return
+  }
+
+  if (value.length < 6 || value.length > 20) {
+    callback(new Error('密码长度在6-20个字符'))
+    return
+  }
+
+  // 新密码不能与原密码相同
+  if (value === profileForm.password) {
+    callback(new Error('新密码不能与原密码相同'))
+    return
+  }
+
+  callback()
+}
+
+// 验证确认密码
+const validateConfirmPassword = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请确认新密码'))
+    return
+  }
+
+  if (value !== passwordForm.newPassword) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
+
+// 密码规则
+const passwordRules = {
+  oldPassword: [
+    { required: true, message: '请输入原密码', trigger: 'blur' },
+    { validator: validateOldPassword, trigger: 'blur' }
+  ],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度在6-20个字符', trigger: 'blur' },
+    { validator: validateNewPassword, trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请确认新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' }
+  ]
+}
 
 // 页面加载
 onMounted(() => {
@@ -568,11 +649,6 @@ const handleSaveProfile = async () => {
   }
 }
 
-// 修改密码
-const handleChangePassword = () => {
-  ElMessage.info('修改密码功能开发中...')
-}
-
 // 格式化日期
 const formatDate = (dateString) => {
   if (!dateString) return ''
@@ -582,6 +658,132 @@ const formatDate = (dateString) => {
   } catch (e) {
     return dateString
   }
+}
+
+// 修改密码点击
+const handleChangePassword = () => {
+  if (!passwordFormRef.value) return
+
+  passwordFormRef.value.validate(async (valid) => {
+    if (!valid) return
+
+    changing.value = true
+
+    try {
+      const userId = localStorage.getItem('current_user_id')
+      if (!userId) {
+        ElMessage.error('用户ID不存在')
+        return
+      }
+
+      // 这里调用修改密码API
+      const response = await changePassword({
+        id: userId,
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword
+      })
+
+      if (response && (response.code === 200 || response.code === 0)) {
+        ElMessage.success('密码修改成功，请重新登录')
+
+        // 关闭对话框
+        closePasswordDialog()
+
+        // 延迟跳转到登录页
+        setTimeout(() => {
+          // 清除登录状态
+          localStorage.removeItem('is_logged_in')
+          localStorage.removeItem('hanfu_user')
+          localStorage.removeItem('current_user_id')
+
+          // 跳转到登录页
+          router.push('/login')
+        }, 1500)
+      } else {
+        ElMessage.error(response?.message || '密码修改失败')
+      }
+    } catch (error) {
+      console.error('修改密码失败:', error)
+      ElMessage.error('修改密码失败')
+    } finally {
+      changing.value = false
+    }
+  })
+}
+
+// 检查密码强度
+const checkPasswordStrength = () => {
+  const password = passwordForm.newPassword
+  if (!password) {
+    passwordStrength.value = 0
+    return
+  }
+
+  let strength = 0
+
+  // 长度检查
+  if (password.length >= 8) strength++
+
+  // 复杂度检查
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++
+  if (/\d/.test(password)) strength++
+  if (/[^a-zA-Z0-9]/.test(password)) strength++
+
+  passwordStrength.value = Math.min(strength, 3)
+}
+
+// 密码强度文本
+const strengthText = computed(() => {
+  switch (passwordStrength.value) {
+    case 0: return '极弱'
+    case 1: return '弱'
+    case 2: return '中'
+    case 3: return '强'
+    default: return ''
+  }
+})
+
+// 密码强度样式类
+const strengthClass = computed(() => {
+  switch (passwordStrength.value) {
+    case 0: return 'very-weak'
+    case 1: return 'weak'
+    case 2: return 'medium'
+    case 3: return 'strong'
+    default: return ''
+  }
+})
+
+// 强度条样式
+const barClass = (index) => {
+  if (passwordStrength.value > index) {
+    return strengthClass.value
+  }
+  return ''
+}
+
+// 关闭密码对话框
+const closePasswordDialog = () => {
+  passwordDialogVisible.value = false
+  resetPasswordForm()
+}
+
+// 重置密码表单
+const resetPasswordForm = () => {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordStrength.value = 0
+
+  if (passwordFormRef.value) {
+    passwordFormRef.value.resetFields()
+  }
+}
+
+// 打开修改密码对话框（新增这个函数）
+const openPasswordDialog = () => {
+  resetPasswordForm()  // 重置表单
+  passwordDialogVisible.value = true
 }
 </script>
 
@@ -946,5 +1148,233 @@ const formatDate = (dateString) => {
   object-fit: contain;
   border-radius: 10px;
   border: 1px solid #f0e6d6;
+}
+
+/* 修改密码对话框样式 */
+.password-change-dialog {
+  padding: 10px 0 20px;
+}
+
+/* 对话框头部 */
+.dialog-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f8f5f0, #f0e6d6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+  border: 2px solid #f0e6d6;
+}
+
+.header-icon .el-icon {
+  font-size: 28px;
+  color: #d4af37;
+}
+
+.header-title {
+  font-size: 20px;
+  color: #333;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.header-subtitle {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* 表单 */
+.password-form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+.form-item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.form-item-label .el-icon {
+  color: #d4af37;
+  font-size: 16px;
+}
+
+.password-input {
+  width: 100%;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 8px;
+  padding: 8px 15px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s;
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: #d4af37;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.1);
+}
+
+:deep(.el-input__prefix) {
+  color: #999;
+  margin-right: 10px;
+}
+
+/* 密码强度提示 */
+.password-strength-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint-text {
+  color: #666;
+}
+
+.strength-text {
+  font-weight: bold;
+  min-width: 30px;
+}
+
+.strength-text.very-weak {
+  color: #ff4d4f;
+}
+
+.strength-text.weak {
+  color: #fa8c16;
+}
+
+.strength-text.medium {
+  color: #d4af37;
+}
+
+.strength-text.strong {
+  color: #52c41a;
+}
+
+.strength-bar {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #f0f0f0;
+}
+
+.bar-segment {
+  flex: 1;
+  height: 100%;
+  transition: all 0.3s;
+}
+
+.bar-segment.very-weak {
+  background: #ff4d4f;
+}
+
+.bar-segment.weak {
+  background: #fa8c16;
+}
+
+.bar-segment.medium {
+  background: #d4af37;
+}
+
+.bar-segment.strong {
+  background: #52c41a;
+}
+
+/* 密码提示 */
+.password-tips {
+  background: #f8f5f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 20px 0 30px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.password-tips p {
+  margin: 8px 0;
+  color: #666;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.password-tips .el-icon {
+  color: #d4af37;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* 操作按钮 */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  min-width: 100px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.cancel-btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+  color: #333;
+}
+
+.submit-btn {
+  min-width: 100px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  border: none;
+  color: white;
+  transition: all 0.3s;
+}
+
+.submit-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+}
+
+.submit-btn:active {
+  transform: translateY(0);
 }
 </style>
