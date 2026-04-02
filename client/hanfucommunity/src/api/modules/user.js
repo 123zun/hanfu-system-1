@@ -19,10 +19,11 @@ export const register = (data) => {
 }
 
 // 获取用户信息
-export const getUserInfo = () => {
+export const getUserInfo = (data) => {
     return request({
         url: '/user/info',
-        method: 'GET'
+        method: 'Post',
+        data
     })
 }
 
@@ -30,7 +31,7 @@ export const getUserInfo = () => {
 export const updateUserInfo = (data) => {
     return request({
         url: '/user/update',
-        method: 'PUT',
+        method: 'Post',
         data
     })
 }
@@ -38,7 +39,7 @@ export const updateUserInfo = (data) => {
 // 修改密码
 export const changePassword = (data) => {
     return request({
-        url: '/user/change-password',
+        url: '/user/password',
         method: 'POST',
         data
     })

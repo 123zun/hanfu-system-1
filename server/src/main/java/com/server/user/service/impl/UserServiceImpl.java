@@ -64,7 +64,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public R<?> login(String username, String password) {
-        System.out.println("33333333333333333");
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             return R.error("用户名和密码不能为空");
         }
@@ -94,8 +93,6 @@ public class UserServiceImpl implements UserService {
             return R.error("用户不存在");
         }
 
-        // 隐藏密码
-        userInfo.setPassword(null);
         return R.success(userInfo);
     }
 

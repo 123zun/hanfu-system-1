@@ -45,26 +45,25 @@ public class UserController {
     // 用户登录
     @PostMapping("/login")
     public R<?> login(@RequestBody Map<String, String> params) {
-        System.out.println("2222222222222222222");
         String username = params.get("username");
         String password = params.get("password");
         return userService.login(username, password);
     }
 
     // 获取用户信息
-    @GetMapping("/user/{id}")
-    public R<?> getUserInfo(@PathVariable Long id) {
+    @PostMapping("/info")
+    public R<?> getUserInfo(@RequestBody Long id) {
         return userService.getUserInfo(id);
     }
 
     // 更新用户信息
-    @PutMapping("/user")
+    @PostMapping("/update")
     public R<?> updateUserInfo(@RequestBody UserInfo userInfo) {
         return userService.updateUserInfo(userInfo);
     }
 
     // 修改密码
-    @PutMapping("/user/password")
+    @PostMapping("/password")
     public R<?> changePassword(@RequestBody Map<String, String> params) {
         Long userId = Long.parseLong(params.get("userId"));
         String oldPassword = params.get("oldPassword");
@@ -197,7 +196,7 @@ public class UserController {
     // 获取默认头像URL
     @GetMapping("/avatar/default")
     public R<?> getDefaultAvatar() {
-        String defaultAvatar = "/uploads/avatars/default.jpg";
+        String defaultAvatar = "/static/uploads/avatars/default.png";
         return R.success("获取默认头像成功", Map.of("avatarUrl", defaultAvatar));
     }
 }

@@ -4,8 +4,8 @@
     <div class="profile-header">
       <div class="profile-banner">
         <div class="banner-overlay"></div>
-        <div class="profile-avatar">
-          <img :src="userInfo.avatar || defaultAvatar" alt="用户头像" />
+        <div class="profile-avatar" style="margin-top:15px;">
+          <img :src="userInfo.avatar || defaultAvatar" />
           <div class="avatar-upload" @click="triggerAvatarUpload">
             <el-icon><Camera /></el-icon>
             <span>更换头像</span>
@@ -20,7 +20,7 @@
         />
       </div>
 
-      <div class="profile-info">
+      <div class="profile-info" style="margin-top:100px;">
         <h2 class="profile-name">{{ userInfo.username || '汉服爱好者' }}</h2>
         <p class="profile-bio">{{ userInfo.bio || '传承华夏文明，弘扬汉服文化' }}</p>
         <div class="profile-stats">
@@ -57,7 +57,7 @@
             label-width="100px"
             class="profile-form"
         >
-          <el-form-item label="用户名" prop="username">
+          <el-form-item label="用&ensp;户&ensp;名" prop="username">
             <el-input
                 v-model="profileForm.username"
                 placeholder="请输入用户名"
@@ -65,7 +65,7 @@
             />
           </el-form-item>
 
-          <el-form-item label="邮箱" prop="email">
+          <el-form-item label="邮&emsp;&emsp;箱" prop="email">
             <el-input
                 v-model="profileForm.email"
                 placeholder="请输入邮箱地址"
@@ -73,7 +73,7 @@
             />
           </el-form-item>
 
-          <el-form-item label="手机号" prop="phone">
+          <el-form-item label="手&ensp;机&ensp;号" prop="phone">
             <el-input
                 v-model="profileForm.phone"
                 placeholder="请输入手机号码"
@@ -81,28 +81,26 @@
             />
           </el-form-item>
 
-          <el-form-item label="性别" prop="gender">
+          <el-form-item label="性&emsp;&emsp;别" prop="gender">
             <el-radio-group v-model="profileForm.gender">
               <el-radio label="male">男</el-radio>
               <el-radio label="female">女</el-radio>
             </el-radio-group>
           </el-form-item>
 
-          <el-form-item label="出生日期">
-            <el-date-picker
-                v-model="profileForm.birthday"
-                type="date"
-                placeholder="选择出生日期"
-                style="width: 100%"
+          <el-form-item label="年&emsp;&emsp;龄">
+            <el-input
+                v-model="profileForm.age"
+                placeholder="请输入年龄"
+                clearable
             />
           </el-form-item>
 
           <el-form-item label="所在地区">
-            <el-cascader
+            <el-input
                 v-model="profileForm.region"
-                :options="regionOptions"
-                placeholder="请选择所在地区"
-                style="width: 100%"
+                placeholder="请输入所在地区"
+                clearable
             />
           </el-form-item>
 
@@ -126,7 +124,6 @@
             >
               {{ saving ? '保存中...' : '保存修改' }}
             </el-button>
-            <el-button @click="resetForm">重置</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -158,14 +155,6 @@
           <el-button type="warning" class="security-btn" @click="handleChangePassword">
             <el-icon><Lock /></el-icon>
             修改密码
-          </el-button>
-          <el-button type="info" class="security-btn">
-            <el-icon><Message /></el-icon>
-            绑定邮箱
-          </el-button>
-          <el-button type="info" class="security-btn">
-            <el-icon><Iphone /></el-icon>
-            绑定手机
           </el-button>
         </div>
 
@@ -213,6 +202,121 @@
       </template>
     </el-dialog>
   </div>
+  <el-dialog
+      v-model="passwordDialogVisible"
+      title="修改密码"
+      width="480px"
+      align-center
+      :close-on-click-modal="false"
+  >
+    <div class="password-change-dialog">
+      <div class="dialog-header">
+        <div class="header-icon">
+          <el-icon><Lock /></el-icon>
+        </div>
+        <h3 class="header-title">修改密码</h3>
+        <p class="header-subtitle">为了保护您的账户安全，请谨慎修改密码</p>
+      </div>
+
+      <el-form
+          ref="passwordFormRef"
+          :model="passwordForm"
+          :rules="passwordRules"
+          label-width="0"
+          class="password-form"
+      >
+        <!-- 原密码 -->
+        <el-form-item prop="oldPassword">
+          <div class="form-item-label">
+            <el-icon><Key /></el-icon>
+            原密码
+          </div>
+          <el-input
+              v-model="passwordForm.oldPassword"
+              type="password"
+              placeholder="请输入当前使用的密码"
+              size="large"
+              :prefix-icon="Lock"
+              show-password
+              clearable
+              class="password-input"
+          />
+        </el-form-item>
+
+        <!-- 新密码 -->
+        <el-form-item prop="newPassword">
+          <div class="form-item-label">
+            <el-icon><Edit /></el-icon>
+            新密码
+          </div>
+          <el-input
+              v-model="passwordForm.newPassword"
+              type="password"
+              placeholder="请输入6-20位新密码"
+              size="large"
+              :prefix-icon="Lock"
+              show-password
+              clearable
+              class="password-input"
+              @input="checkPasswordStrength"
+          />
+
+          <!-- 密码强度提示 -->
+          <div v-if="passwordForm.newPassword" class="password-strength-hint">
+            <span class="hint-text">密码强度：</span>
+            <span :class="['strength-text', strengthClass]">{{ strengthText }}</span>
+            <div class="strength-bar">
+              <div :class="['bar-segment', barClass(0)]"></div>
+              <div :class="['bar-segment', barClass(1)]"></div>
+              <div :class="['bar-segment', barClass(2)]"></div>
+            </div>
+          </div>
+        </el-form-item>
+
+        <!-- 确认新密码 -->
+        <el-form-item prop="confirmPassword">
+          <div class="form-item-label">
+            <el-icon><Check /></el-icon>
+            确认新密码
+          </div>
+          <el-input
+              v-model="passwordForm.confirmPassword"
+              type="password"
+              placeholder="请再次输入新密码"
+              size="large"
+              :prefix-icon="Lock"
+              show-password
+              clearable
+              class="password-input"
+          />
+        </el-form-item>
+
+        <!-- 密码提示 -->
+        <div class="password-tips">
+          <p><el-icon><InfoFilled /></el-icon> 密码长度6-20位，建议包含字母、数字</p>
+          <p><el-icon><Warning /></el-icon> 修改成功后需要重新登录</p>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="form-actions">
+          <el-button
+              @click="closePasswordDialog"
+              class="cancel-btn"
+          >
+            取消
+          </el-button>
+          <el-button
+              type="primary"
+              :loading="changing"
+              @click="handleChangePassword"
+              class="submit-btn"
+          >
+            {{ changing ? '修改中...' : '确认修改' }}
+          </el-button>
+        </div>
+      </el-form>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -225,10 +329,17 @@ import {
   Star,
   Medal,
   Lock,
-  Message,
-  Iphone
+  Key,
+  Edit,
+  Check,
+  InfoFilled,
+  Warning
 } from '@element-plus/icons-vue'
-import { getUserInfo, updateUserInfo, uploadAvatar } from '@/api/modules/user'
+import { getUserInfo, updateUserInfo, uploadAvatar,changePassword } from '@/api/modules/user'
+
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 // 默认头像
 const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.jpg'
@@ -246,29 +357,11 @@ const profileForm = reactive({
   phone: '',
   gender: 'male',
   birthday: '',
-  region: [],
-  bio: ''
+  region: '',
+  bio: '',
+  age: '',
+  password:''
 })
-
-// 地区选项
-const regionOptions = [
-  {
-    value: 'beijing',
-    label: '北京',
-    children: [
-      { value: 'dongcheng', label: '东城区' },
-      { value: 'xicheng', label: '西城区' }
-    ]
-  },
-  {
-    value: 'sichuan',
-    label: '四川',
-    children: [
-      { value: 'chengdu', label: '成都' },
-      { value: 'mianyang', label: '绵阳' }
-    ]
-  }
-]
 
 // 成就列表
 const achievements = [
@@ -300,6 +393,8 @@ const profileRules = {
   ]
 }
 
+
+
 // 页面加载
 onMounted(() => {
   loadUserProfile()
@@ -315,6 +410,7 @@ const loadUserProfile = async () => {
     }
 
     const response = await getUserInfo(userId)
+    console.log("个人中心",response);
     if (response && (response.code === 200 || response.code === 0)) {
       const data = response.data || response
       userInfo.value = data
@@ -325,7 +421,10 @@ const loadUserProfile = async () => {
         email: data.email || '',
         phone: data.phone || '',
         gender: data.gender || 'male',
-        bio: data.bio || ''
+        bio: data.bio || '',
+        age: data.age || '',
+        region: data.region || '',
+        password: data.password || ''
       })
     }
   } catch (error) {
@@ -467,17 +566,6 @@ const handleSaveProfile = async () => {
   } finally {
     saving.value = false
   }
-}
-
-// 重置表单
-const resetForm = () => {
-  Object.assign(profileForm, {
-    username: userInfo.value.username || '',
-    email: userInfo.value.email || '',
-    phone: userInfo.value.phone || '',
-    gender: userInfo.value.gender || 'male',
-    bio: userInfo.value.bio || ''
-  })
 }
 
 // 修改密码

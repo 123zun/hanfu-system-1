@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 @TableName("user")
@@ -32,6 +33,15 @@ public class UserInfo {
 
     @TableField("gender")
     private String gender = "male";
+
+    @TableField("region")
+    private String region;
+
+    @TableField("bio")
+    private String bio;
+
+    @TableField("age")
+    private String age;
 
     @TableField("avatar")
     private String avatar = "/uploads/avatars/default.jpg";
