@@ -149,9 +149,7 @@ public class UserController {
             // 获取项目根目录
             String projectPath = System.getProperty("user.dir");
             // 创建上传目录：项目根目录/src/main/resources/static/uploads/avatars/
-            String avatarDir = projectPath + File.separator +"server"+ File.separator + "src" + File.separator + "main"
-                    + File.separator + "resources" + File.separator + "static"
-                    + File.separator + "uploads" + File.separator + "avatars";
+            String avatarDir = projectPath + File.separator + "uploads" + File.separator + "avatars";
 
             File dir = new File(avatarDir);
 
