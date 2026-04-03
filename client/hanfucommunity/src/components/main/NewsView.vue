@@ -43,30 +43,35 @@
       <!-- 热门资讯 -->
       <div class="featured-news">
         <h3 class="list-title">热门资讯</h3>
-        <div class="featured-item" @click="viewNewsDetail(1)">
+        <div
+            v-for="item in featuredList"
+            :key="item.id"
+            class="featured-item"
+            @click="viewNewsDetail(item.id)"
+        >
           <div class="featured-image">
-            <img src="https://images.unsplash.com/photo-1544717305-99670f9c28f4?auto=format&fit=crop&w=600&q=80" alt="汉服文化" />
+            <img :src="getImageUrl(item.coverImage)" alt="汉服文化" />
             <div class="image-overlay">
-              <span class="hot-tag">热门</span>
+              <span class="hot-tag" v-if="item.isHot || item.views > 1000">热门</span>
             </div>
           </div>
           <div class="featured-content">
-            <h4>汉服文化复兴研讨会在京成功举办</h4>
-            <p class="news-excerpt">近日，全国汉服文化复兴研讨会在北京国家会议中心成功举办。来自全国各地的汉服爱好者、专家学者、行业代表等200余人参加了此次盛会...</p>
+            <h4>{{ item.title }}</h4>
+            <p class="news-excerpt">{{ item.excerpt || '暂无摘要' }}...</p>
             <div class="news-meta">
               <span class="meta-item">
                 <el-icon><Calendar /></el-icon>
-                2026-03-20
+                {{ formatDate(item.publishTime) }}
               </span>
               <span class="meta-item">
                 <el-icon><View /></el-icon>
-                1,234 浏览
+                {{ item.views || 0 }} 浏览
               </span>
               <span class="meta-item">
                 <el-icon><ChatDotRound /></el-icon>
-                56 评论
+                {{ item.comments || 0 }} 评论
               </span>
-              <span class="meta-item category-tag">行业动态</span>
+              <span class="meta-item category-tag">{{ getCategoryName(item.category) }}</span>
             </div>
           </div>
         </div>
@@ -83,16 +88,16 @@
               @click="viewNewsDetail(item.id)"
           >
             <div class="news-card-image">
-              <img :src="item.image" :alt="item.title" />
+              <img :src="getImageUrl(item.coverImage)" :alt="item.title" />
             </div>
             <div class="news-card-content">
               <h4>{{ item.title }}</h4>
-              <p class="news-card-excerpt">{{ item.excerpt }}</p>
+              <p class="news-card-excerpt">{{ item.excerpt || '暂无摘要' }}</p>
               <div class="news-card-meta">
-                <span class="meta-item">{{ item.date }}</span>
-                <span class="meta-item">{{ item.views }} 浏览</span>
+                <span class="meta-item">{{ formatDate(item.publishTime) }}</span>
+                <span class="meta-item">{{ item.views || 0 }} 浏览</span>
               </div>
-              <span class="category-badge">{{ item.category }}</span>
+              <span class="category-badge">{{ getCategoryName(item.category) }}</span>
             </div>
           </div>
         </div>
@@ -114,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Reading,
@@ -124,6 +129,7 @@ import {
   ChatDotRound,
   Refresh
 } from '@element-plus/icons-vue'
+import { getArticleList, getHotArticles } from '@/api/modules/article'
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -133,62 +139,120 @@ const categoryFilter = ref('')
 const loading = ref(false)
 
 // 资讯列表数据
-const newsList = reactive([
-  {
-    id: 1,
-    title: '汉服文化复兴研讨会在京成功举办',
-    excerpt: '近日，全国汉服文化复兴研讨会在北京国家会议中心成功举办。来自全国各地的汉服爱好者、专家学者、行业代表等200余人参加了此次盛会。',
-    image: 'https://images.unsplash.com/photo-1544717305-99670f9c28f4?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-20',
-    views: 1234,
-    category: '行业动态'
-  },
-  {
-    id: 2,
-    title: '传统节日活动预告：清明踏青汉服游园会',
-    excerpt: '为弘扬传统文化，本社区将于清明节期间举办汉服游园会，邀请广大汉服爱好者共同参与，体验传统节日的魅力。',
-    image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-18',
-    views: 856,
-    category: '活动资讯'
-  },
-  {
-    id: 3,
-    title: '汉服穿搭技巧：春夏季节的汉服选择与搭配',
-    excerpt: '春夏季节是穿着汉服的好时节，如何根据不同场合选择适合的汉服款式？本文为您详细介绍春夏汉服的穿搭技巧。',
-    image: 'https://images.unsplash.com/photo-1560557776-5d5f72b6c96d?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-15',
-    views: 942,
-    category: '穿搭分享'
-  },
-  {
-    id: 4,
-    title: '汉服摄影大赛开始报名，丰厚奖品等你来拿',
-    excerpt: '第四届汉韵华章汉服摄影大赛正式启动，面向全国汉服爱好者征集优秀摄影作品，最高奖金5000元。',
-    image: 'https://images.unsplash.com/photo-1551103782-8ab07afd45c1?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-12',
-    views: 671,
-    category: '活动资讯'
-  },
-  {
-    id: 5,
-    title: '传统文化讲座直播：汉服的历史演变与发展',
-    excerpt: '本周末将举办线上汉服文化讲座，邀请知名历史学者讲解汉服的历史演变与现代发展。',
-    image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-10',
-    views: 523,
-    category: '学术研究'
-  },
-  {
-    id: 6,
-    title: '汉服制作工艺：传统刺绣技法的现代应用',
-    excerpt: '介绍传统汉服刺绣工艺及其在现代汉服设计中的应用，展现传统手工艺的魅力。',
-    image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?auto=format&fit=crop&w=400&q=80',
-    date: '2026-03-08',
-    views: 789,
-    category: '学术研究'
+const featuredList = reactive([])  // 热门资讯
+const newsList = reactive([])  // 普通资讯
+
+// 分页参数
+let currentPage = 1
+const pageSize = 6
+let hasMore = true
+
+// 页面加载
+onMounted(() => {
+  loadInitialData()
+})
+
+// 加载初始数据
+const loadInitialData = async () => {
+  try {
+    loading.value = true
+
+    // 加载热门资讯
+    await loadHotArticles()
+
+    // 加载普通资讯
+    await loadArticles()
+
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 加载热门资讯
+const loadHotArticles = async () => {
+  try {
+    const response = await getHotArticles(2)  // 只取2条作为热门
+
+    if (response && response.code === 200) {
+      // 清空原有数据
+      featuredList.length = 0
+
+      // 添加新的数据
+      if (response.data && Array.isArray(response.data)) {
+        response.data.forEach(item => {
+          featuredList.push(item)
+        })
+      }
+    } else {
+      // 如果接口失败，从普通资讯中取前2条
+      console.warn('热门资讯接口失败，使用默认数据')
+    }
+  } catch (error) {
+    console.error('加载热门资讯失败:', error)
+  }
+}
+
+// 加载资讯列表
+const loadArticles = async () => {
+  try {
+    const params = {
+      page: currentPage,
+      size: pageSize
+    }
+
+    if (categoryFilter.value) {
+      params.category = categoryFilter.value
+    }
+
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+
+    const response = await getArticleList(params)
+
+    if (response && response.code === 200) {
+      const data = response.data
+
+      if (data && data.records) {
+        // 如果是第一页，清空原有数据
+        if (currentPage === 1) {
+          newsList.length = 0
+        }
+
+        // 添加新的数据
+        data.records.forEach(item => {
+          newsList.push(item)
+        })
+
+        // 检查是否还有更多数据
+        hasMore = data.current * data.size < data.total
+
+        // 如果热门资讯为空，用前2条普通资讯作为热门
+        if (featuredList.length === 0 && data.records.length >= 2) {
+          featuredList.length = 0
+          featuredList.push(...data.records.slice(0, 2))
+        }
+      } else {
+        // 处理不同的返回格式
+        if (Array.isArray(data)) {
+          newsList.length = 0
+          data.forEach(item => {
+            newsList.push(item)
+          })
+
+          if (featuredList.length === 0 && data.length >= 2) {
+            featuredList.length = 0
+            featuredList.push(...data.slice(0, 2))
+          }
+        }
+      }
+    } else {
+      console.warn('资讯列表接口返回错误:', response?.message)
+    }
+  } catch (error) {
+    console.error('加载资讯失败:', error)
+  }
+}
 
 // 查看资讯详情
 const viewNewsDetail = (id) => {
@@ -199,52 +263,81 @@ const viewNewsDetail = (id) => {
 // 搜索资讯
 const handleSearch = () => {
   if (searchKeyword.value) {
-    ElMessage.info(`搜索: ${searchKeyword.value}`)
+    currentPage = 1
+    loadArticles()
   }
 }
 
 // 刷新资讯
 const refreshNews = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
-    ElMessage.success('资讯已刷新')
-  }, 1000)
+  currentPage = 1
+  loadInitialData()
+  ElMessage.success('资讯已刷新')
 }
 
 // 加载更多
 const loadMore = () => {
+  if (!hasMore) {
+    ElMessage.info('没有更多资讯了')
+    return
+  }
+
   loading.value = true
-  setTimeout(() => {
-    // 模拟加载更多数据
-    const newItems = [
-      {
-        id: newsList.length + 1,
-        title: '汉服文化走进校园，培养学生文化自信',
-        excerpt: '越来越多的学校将汉服文化引入课堂，通过汉服体验活动培养学生的文化自信和民族认同感。',
-        image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=400&q=80',
-        date: '2026-03-05',
-        views: 432,
-        category: '行业动态'
-      },
-      {
-        id: newsList.length + 2,
-        title: '汉服租赁服务兴起，降低汉服体验门槛',
-        excerpt: '随着汉服热的兴起，汉服租赁服务逐渐普及，让更多人能够以较低成本体验汉服文化。',
-        image: 'https://images.unsplash.com/photo-1520004434532-668416a08753?auto=format&fit=crop&w=400&q=80',
-        date: '2026-03-03',
-        views: 315,
-        category: '行业动态'
-      }
-    ]
-    newsList.push(...newItems)
+  currentPage++
+
+  loadArticles().finally(() => {
     loading.value = false
-    ElMessage.success(`新增 ${newItems.length} 条资讯`)
-  }, 1500)
+  })
+}
+
+// 辅助函数：格式化日期
+const formatDate = (dateString) => {
+  if (!dateString) return '未知日期'
+
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch (e) {
+    return dateString
+  }
+}
+
+// 辅助函数：获取图片URL
+const getImageUrl = (path) => {
+  if (!path) {
+    return 'https://images.unsplash.com/photo-1544717305-99670f9c28f4?auto=format&fit=crop&w=400&q=80'
+  }
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+
+  if (path.startsWith('/')) {
+    return `http://localhost:8080${path}`
+  }
+
+  return `http://localhost:8080/${path}`
+}
+
+// 辅助函数：获取分类名称
+const getCategoryName = (category) => {
+  const categoryMap = {
+    'industry': '行业动态',
+    'activity': '活动资讯',
+    'academic': '学术研究',
+    'fashion': '穿搭分享'
+  }
+
+  return categoryMap[category] || category || '未分类'
 }
 </script>
 
 <style scoped>
+/* 保持原有样式完全不变 */
 .news-view {
   padding: 30px;
   min-height: 600px;
