@@ -28,7 +28,25 @@ const routes = [
         name: 'register',
         component: () => import('@/views/user/RegisterView.vue'),
         meta: { title: '注册 - 汉韵华章' }
-    }
+    },
+    {
+        path: '/article',
+        name: 'article',
+        component: () => import('@/components/main/ArticleCreate.vue'),
+        meta: {
+            title: '创建资讯',
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/article/edit/:id',  // 编辑路由，带参数
+        name: 'article-edit',       // 这个名字要与组件中的判断匹配
+        component: () => import('@/components/main/ArticleCreate.vue'),
+        meta: {
+            title: '编辑资讯',
+            requiresAuth: true
+        }
+    },
 ]
 
 // 创建路由实例

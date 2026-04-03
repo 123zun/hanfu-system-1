@@ -70,3 +70,29 @@ export const getArticleCategories = () => {
         method: 'GET'
     })
 }
+
+// 创建资讯
+export const createArticle = (data) => {
+    return request({
+        url: '/article/create',
+        method: 'POST',
+        data: data
+    })
+}
+
+// 更新资讯
+export const updateArticle = (id, data) => {
+    return request({
+        url: `/article/update/${id}`,
+        method: 'PUT',
+        data: data
+    })
+}
+
+// 删除资讯
+export const deleteArticle = (id) => {
+    return request({
+        url: `/article/delete/${id}`,
+        method: 'DELETE'
+    })
+}

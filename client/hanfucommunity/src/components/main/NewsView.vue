@@ -23,19 +23,30 @@
         </template>
       </el-input>
 
+      <!-- 分类筛选部分修改 -->
       <el-select
           v-model="categoryFilter"
           placeholder="分类筛选"
           clearable
           class="category-select"
+          @change="handleCategoryChange"
       >
-        <el-option label="行业动态" value="industry" />
-        <el-option label="活动资讯" value="activity" />
-        <el-option label="学术研究" value="academic" />
-        <el-option label="穿搭分享" value="fashion" />
+        <el-option
+            v-for="category in categories"
+            :key="category.code"
+            :label="category.name"
+            :value="category.code"
+        />
       </el-select>
 
       <el-button type="primary" icon="Refresh" @click="refreshNews">刷新</el-button>
+      <el-button
+          type="success"
+          icon="Plus"
+          @click="handleAddArticle"
+      >
+        新增
+      </el-button>
     </div>
 
     <!-- 资讯列表 -->
@@ -120,6 +131,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Reading,
@@ -129,7 +141,9 @@ import {
   ChatDotRound,
   Refresh
 } from '@element-plus/icons-vue'
-import { getArticleList, getHotArticles } from '@/api/modules/article'
+import { getArticleList, getHotArticles ,getArticleCategories} from '@/api/modules/article'
+
+const router = useRouter()
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -137,6 +151,8 @@ const searchKeyword = ref('')
 const categoryFilter = ref('')
 // 加载状态
 const loading = ref(false)
+// 分类列表
+const categories = ref([])
 
 // 资讯列表数据
 const featuredList = reactive([])  // 热门资讯
@@ -149,8 +165,15 @@ let hasMore = true
 
 // 页面加载
 onMounted(() => {
+  loadCategories()
   loadInitialData()
 })
+
+const handleAddArticle = () => {
+  console.log("跳转页面");
+  // 跳转到新增资讯页面
+  router.push('/article')
+}
 
 // 加载初始数据
 const loadInitialData = async () => {
@@ -166,6 +189,64 @@ const loadInitialData = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 加载分类列表
+const loadCategories = async () => {
+  try {
+    const response = await getArticleCategories()
+    console.log('分类接口返回:', response)
+
+    if (response && response.code === 200) {
+      const data = response.data
+
+      if (Array.isArray(data)) {
+        // 后端返回的是字符串数组，我们需要转换为对象数组
+        categories.value = data.map(category => {
+          // 假设后端返回的格式是: ['industry', 'activity', 'academic']
+          return {
+            code: category,
+            name: getCategoryDisplayName(category)  // 将编码转为中文显示名
+          }
+        })
+
+        console.log('转换后的分类列表:', categories.value)
+      } else {
+        // 如果返回格式不对，使用默认分类
+        setDefaultCategories()
+      }
+    } else {
+      console.warn('分类接口返回错误:', response?.message)
+      setDefaultCategories()
+    }
+  } catch (error) {
+    console.error('加载分类失败:', error)
+    setDefaultCategories()
+  }
+}
+
+// 设置默认分类
+const setDefaultCategories = () => {
+  categories.value = [
+    { code: 'industry', name: '行业动态' },
+    { code: 'activity', name: '活动资讯' },
+    { code: 'academic', name: '学术研究' },
+    { code: 'fashion', name: '穿搭分享' }
+  ]
+}
+
+// 将分类编码转为中文显示名
+const getCategoryDisplayName = (categoryCode) => {
+  const categoryMap = {
+    'industry': '行业动态',
+    'activity': '活动资讯',
+    'academic': '学术研究',
+    'fashion': '穿搭分享',
+    'news': '新闻资讯',
+    'guide': '攻略指南'
+  }
+
+  return categoryMap[categoryCode] || categoryCode || '未分类'
 }
 
 // 加载热门资讯
@@ -323,16 +404,18 @@ const getImageUrl = (path) => {
   return `http://localhost:8080/${path}`
 }
 
-// 辅助函数：获取分类名称
-const getCategoryName = (category) => {
-  const categoryMap = {
-    'industry': '行业动态',
-    'activity': '活动资讯',
-    'academic': '学术研究',
-    'fashion': '穿搭分享'
-  }
+// 分类筛选
+const handleCategoryChange = () => {
+  currentPage = 1
+  loadArticles()
+}
 
-  return categoryMap[category] || category || '未分类'
+// 辅助函数：获取分类名称
+const getCategoryName = (categoryCode) => {
+  if (!categoryCode) return '未分类'
+
+  const category = categories.value.find(item => item.code === categoryCode)
+  return category ? category.name : '未分类'
 }
 </script>
 
