@@ -140,7 +140,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
   ArrowLeft,
   Edit,
@@ -466,12 +466,12 @@ const handleSaveDraft = async () => {
 const goBack = () => {
   // 如果有未保存的内容，提示保存
   if (articleForm.title || articleForm.content) {
-    ElMessageBox.confirm('内容未保存，是否保存草稿？', '提示', {
-      confirmButtonText: '保存草稿',
+    ElMessageBox.confirm('内容未保存，是否保存？', '提示', {
+      confirmButtonText: '保存',
       cancelButtonText: '不保存',
       type: 'warning'
     }).then(() => {
-      handleSaveDraft()
+      handleSubmit()
       setTimeout(() => {
         router.push('/main')
       }, 500)

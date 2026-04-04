@@ -84,6 +84,20 @@
               </span>
               <span class="meta-item category-tag">{{ getCategoryName(item.category) }}</span>
             </div>
+            <div class="article-actions">
+              <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleEdit(item.id)"
+                  icon="Edit">编辑</el-button>
+              <el-button
+                  type="danger"
+                  link
+                  size="small"
+                  @click="handleDelete(item.id, item.title)"
+                  icon="Delete">删除</el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -110,6 +124,20 @@
               </div>
               <span class="category-badge">{{ getCategoryName(item.category) }}</span>
             </div>
+            <div class="card-actions">
+              <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleEdit(item.id)"
+                  icon="Edit">编辑</el-button>
+              <el-button
+                  type="danger"
+                  link
+                  size="small"
+                  @click="handleDelete(item.id, item.title)"
+                  icon="Delete">删除</el-button>
+            </div>
           </div>
         </div>
       </div>
@@ -132,16 +160,18 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
   Reading,
   Search,
   Calendar,
   View,
   ChatDotRound,
-  Refresh
+  Refresh,
+  Edit,
+  Delete
 } from '@element-plus/icons-vue'
-import { getArticleList, getHotArticles ,getArticleCategories} from '@/api/modules/article'
+import { getArticleList, getHotArticles ,getArticleCategories ,deleteArticle} from '@/api/modules/article'
 
 const router = useRouter()
 
@@ -170,9 +200,47 @@ onMounted(() => {
 })
 
 const handleAddArticle = () => {
-  console.log("跳转页面");
   // 跳转到新增资讯页面
   router.push('/article')
+}
+
+// 编辑资讯
+const handleEdit = (id) => {
+  router.push(`/article/edit/${id}`)
+}
+
+// 删除资讯
+const handleDelete = async (id, title) => {
+  try {
+    // 确认对话框
+    await ElMessageBox.confirm(
+        `确定要删除资讯《${title}》吗？`,
+        '删除确认',
+        {
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+          confirmButtonClass: 'el-button--danger'
+        }
+    )
+
+    // 调用删除接口
+    const response = await deleteArticle(id)
+
+    if (response && response.code === 200) {
+      ElMessage.success('删除成功')
+
+      // 刷新列表
+      refreshNews()
+    } else {
+      ElMessage.error(response?.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败，请稍后重试')
+    }
+  }
 }
 
 // 加载初始数据
@@ -421,6 +489,33 @@ const getCategoryName = (categoryCode) => {
 
 <style scoped>
 /* 保持原有样式完全不变 */
+
+.article-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(212, 175, 55, 0.1);
+  padding-top: 10px;
+}
+
+.card-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.article-actions .el-button,
+.card-actions .el-button {
+  font-size: 13px;
+}
+
+.article-actions .el-button:hover,
+.card-actions .el-button:hover {
+  transform: scale(1.05);
+}
+
 .news-view {
   padding: 30px;
   min-height: 600px;
