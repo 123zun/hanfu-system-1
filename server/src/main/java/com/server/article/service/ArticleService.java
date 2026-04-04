@@ -46,4 +46,26 @@ public interface ArticleService {
      * 增加浏览量
      */
     void increaseViewCount(Long id);
+
+    // 在 ArticleService.java 中添加以下方法
+
+    /**
+     * 点赞/取消点赞文章
+     */
+    boolean likeArticle(Long articleId, Long userId);
+
+    /**
+     * 检查用户是否点赞了文章
+     */
+    boolean isLiked(Long articleId, Long userId);
+
+    /**
+     * 收藏/取消收藏文章
+     */
+    boolean collectArticle(Long articleId, Long userId);
+
+    /**
+     * 检查用户是否收藏了文章
+     */
+    boolean isCollected(Long articleId, Long userId);
 }

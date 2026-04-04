@@ -58,7 +58,6 @@
             v-for="item in featuredList"
             :key="item.id"
             class="featured-item"
-            @click="viewNewsDetail(item.id)"
         >
           <div class="featured-image">
             <img :src="getImageUrl(item.coverImage)" alt="汉服文化" />
@@ -86,6 +85,12 @@
             </div>
             <div class="article-actions">
               <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click.stop="viewNewsDetail(item.id)"
+                  icon="View">查看</el-button>
+              <el-button
                   type="primary"
                   link
                   size="small"
@@ -110,7 +115,6 @@
               v-for="item in newsList"
               :key="item.id"
               class="news-card"
-              @click="viewNewsDetail(item.id)"
           >
             <div class="news-card-image">
               <img :src="getImageUrl(item.coverImage)" :alt="item.title" />
@@ -125,6 +129,12 @@
               <span class="category-badge">{{ getCategoryName(item.category) }}</span>
             </div>
             <div class="card-actions">
+              <el-button
+                  type="info"
+                  link
+                  size="small"
+                  @click.stop="viewNewsDetail(item.id)"
+                  icon="View">查看</el-button>
               <el-button
                   type="primary"
                   link
@@ -171,7 +181,7 @@ import {
   Edit,
   Delete
 } from '@element-plus/icons-vue'
-import { getArticleList, getHotArticles ,getArticleCategories ,deleteArticle} from '@/api/modules/article'
+import { getArticleList, getHotArticles ,getArticleCategories ,deleteArticle ,increaseArticleView} from '@/api/modules/article'
 
 const router = useRouter()
 
@@ -199,8 +209,13 @@ onMounted(() => {
   loadInitialData()
 })
 
-const handleAddArticle = () => {
-  // 跳转到新增资讯页面
+// 查看资讯详情
+const viewNewsDetail = async (id) => {
+  await increaseArticleView(id)
+  await router.push(`/article/detail/${id}`)
+}
+
+const handleAddArticle =  () => {
   router.push('/article')
 }
 
@@ -401,12 +416,6 @@ const loadArticles = async () => {
   } catch (error) {
     console.error('加载资讯失败:', error)
   }
-}
-
-// 查看资讯详情
-const viewNewsDetail = (id) => {
-  ElMessage.info(`查看资讯详情 ID: ${id}`)
-  // 这里可以跳转到详情页
 }
 
 // 搜索资讯

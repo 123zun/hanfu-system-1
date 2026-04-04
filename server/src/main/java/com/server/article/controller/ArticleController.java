@@ -315,12 +315,80 @@ public class ArticleController {
     @PostMapping("/view/{id}")
     public R<?> increaseView(@PathVariable Long id) {
         try {
-            log.info("增加浏览量: id={}", id);
+            System.out.println("增加浏览量: id={}"+id);
             articleService.increaseViewCount(id);
             return R.success("操作成功");
         } catch (Exception e) {
             log.error("增加浏览量失败", e);
             return R.error("操作失败");
+        }
+    }
+
+    // 在 ArticleController.java 中添加以下方法
+
+    /**
+     * 点赞/取消点赞文章
+     */
+    @PostMapping("/like/{id}")
+    public R<?> likeArticle(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            log.info("点赞/取消点赞文章: articleId={}, userId={}", id, userId);
+            boolean result = articleService.likeArticle(id, userId);
+            if (result) {
+                return R.success("操作成功");
+            } else {
+                return R.error("操作失败");
+            }
+        } catch (Exception e) {
+            log.error("点赞操作失败", e);
+            return R.error("操作失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 检查用户是否点赞了文章
+     */
+    @GetMapping("/like/check")
+    public R<?> checkLiked(@RequestParam Long articleId, @RequestParam Long userId) {
+        try {
+            boolean liked = articleService.isLiked(articleId, userId);
+            return R.success("查询成功", liked);
+        } catch (Exception e) {
+            log.error("查询点赞状态失败", e);
+            return R.error("查询失败");
+        }
+    }
+
+    /**
+     * 收藏/取消收藏文章
+     */
+    @PostMapping("/collect/{id}")
+    public R<?> collectArticle(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            log.info("收藏/取消收藏文章: articleId={}, userId={}", id, userId);
+            boolean result = articleService.collectArticle(id, userId);
+            if (result) {
+                return R.success("操作成功");
+            } else {
+                return R.error("操作失败");
+            }
+        } catch (Exception e) {
+            log.error("收藏操作失败", e);
+            return R.error("操作失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 检查用户是否收藏了文章
+     */
+    @GetMapping("/collect/check")
+    public R<?> checkCollected(@RequestParam Long articleId, @RequestParam Long userId) {
+        try {
+            boolean collected = articleService.isCollected(articleId, userId);
+            return R.success("查询成功", collected);
+        } catch (Exception e) {
+            log.error("查询收藏状态失败", e);
+            return R.error("查询失败");
         }
     }
 

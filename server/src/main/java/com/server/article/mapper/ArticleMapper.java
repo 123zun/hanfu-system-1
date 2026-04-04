@@ -26,4 +26,5 @@ public interface ArticleMapper extends BaseMapper<Article> {
     // 减少点赞数
     @Update("UPDATE article SET likes = likes - 1 WHERE id = #{id}")
     int decreaseLikes(@Param("id") Long id);
+
 }

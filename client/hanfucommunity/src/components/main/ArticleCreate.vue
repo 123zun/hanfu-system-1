@@ -127,9 +127,6 @@
           >
             {{ submitting ? '提交中...' : isEdit ? '更新资讯' : '发布资讯' }}
           </el-button>
-          <el-button @click="handleSaveDraft" :loading="savingDraft">
-            {{ savingDraft ? '保存中...' : '保存草稿' }}
-          </el-button>
           <el-button @click="goBack">取消</el-button>
         </el-form-item>
       </el-form>
@@ -429,36 +426,6 @@ const handleSubmit = async () => {
     ElMessage.error('提交失败，请稍后重试')
   } finally {
     submitting.value = false
-  }
-}
-
-// 保存草稿
-const handleSaveDraft = async () => {
-  if (!articleForm.title.trim() && !articleForm.content.trim()) {
-    ElMessage.warning('请输入标题或内容')
-    return
-  }
-
-  savingDraft.value = true
-
-  try {
-    const draft = {
-      title: articleForm.title,
-      category: articleForm.category,
-      coverImage: articleForm.coverImage,
-      excerpt: articleForm.excerpt,
-      content: articleForm.content,
-      saveTime: new Date().toLocaleString()
-    }
-
-    localStorage.setItem('article_draft', JSON.stringify(draft))
-    ElMessage.success('草稿保存成功')
-
-  } catch (error) {
-    console.error('保存草稿失败:', error)
-    ElMessage.error('保存草稿失败')
-  } finally {
-    savingDraft.value = false
   }
 }
 

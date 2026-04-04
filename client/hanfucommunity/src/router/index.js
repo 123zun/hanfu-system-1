@@ -47,6 +47,14 @@ const routes = [
             requiresAuth: true
         }
     },
+    {
+        path: '/article/detail/:id',
+        name: 'article-detail',
+        component: () => import('@/components/main/ArticleDetail.vue'),
+        meta: {
+            title: '资讯详情'
+        }
+    }
 ]
 
 // 创建路由实例

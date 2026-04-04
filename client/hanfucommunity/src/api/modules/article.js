@@ -96,3 +96,31 @@ export const deleteArticle = (id) => {
         method: 'DELETE'
     })
 }
+
+// 增加资讯浏览量
+export const increaseArticleView = (id) => {
+    return request({
+        url: `/article/view/${id}`,
+        method: 'POST'
+    })
+}
+
+// 在 article.js 中添加
+
+// 点赞/取消点赞文章
+export const likeArticle = (id, userId) => {
+    return request({
+        url: `/article/like/${id}`,
+        method: 'POST',
+        params: { userId }
+    })
+}
+
+// 收藏/取消收藏文章
+export const collectArticle = (id, userId) => {
+    return request({
+        url: `/article/collect/${id}`,
+        method: 'POST',
+        params: { userId }
+    })
+}

@@ -8,12 +8,17 @@ import com.server.article.dto.ArticleDTO;
 import com.server.article.dto.ArticleQuery;
 import com.server.article.entity.Article;
 import com.server.article.mapper.ArticleMapper;
+import com.server.article.mapper.CollectionMapper;
+import com.server.article.mapper.LikeMapper;
 import com.server.article.service.ArticleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import com.server.entity.Likes;
+import com.server.entity.Collection;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,6 +29,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> implements ArticleService {
+
+    @Autowired
+    private LikeMapper likeMapper;
+
+    @Autowired
+    private CollectionMapper collectionMapper;
 
     /**
      * 分页查询资讯列表
@@ -286,6 +297,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     /**
      * 将Article实体转换为ArticleDTO
      */
+    // 修改 convertToDTO 方法，添加点赞和收藏状态
     private ArticleDTO convertToDTO(Article article, Long currentUserId) {
         ArticleDTO dto = new ArticleDTO();
         BeanUtils.copyProperties(article, dto);
@@ -296,10 +308,115 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             dto.setImages(images);
         }
 
-        // 这里可以添加点赞、收藏状态判断
-        // dto.setLiked(checkUserLiked(article.getId(), currentUserId));
-        // dto.setCollected(checkUserCollected(article.getId(), currentUserId));
+        // 添加点赞和收藏状态
+        if (currentUserId != null) {
+            dto.setLiked(isLiked(article.getId(), currentUserId));
+            dto.setCollected(isCollected(article.getId(), currentUserId));
+        }
 
         return dto;
+    }
+
+    /**
+     * 点赞/取消点赞文章
+     */
+    @Override
+    @Transactional
+    public boolean likeArticle(Long articleId, Long userId) {
+        log.info("点赞/取消点赞文章: articleId={}, userId={}", articleId, userId);
+
+        // 检查是否已经点赞
+        Likes existingLike = likeMapper.getLikeRecord(userId, "article", articleId);
+
+        if (existingLike == null) {
+            // 未点赞，新增点赞记录
+            Likes like = new Likes();
+            like.setUserId(userId);
+            like.setTargetType("article");
+            like.setTargetId(articleId);
+            like.setStatus(0);
+            int inserted = likeMapper.insert(like);
+
+            if (inserted > 0) {
+                // 文章点赞数+1
+                this.baseMapper.increaseLikes(articleId);
+                return true;
+            }
+        } else if (existingLike.getStatus() == 0) {
+            // 已点赞，取消点赞（软删除）
+            existingLike.setStatus(1);
+            int updated = likeMapper.updateById(existingLike);
+
+            if (updated > 0) {
+                // 文章点赞数-1
+                this.baseMapper.decreaseLikes(articleId);
+                return true;
+            }
+        } else {
+            // 已取消点赞，重新点赞
+            existingLike.setStatus(0);
+            int updated = likeMapper.updateById(existingLike);
+
+            if (updated > 0) {
+                // 文章点赞数+1
+                this.baseMapper.increaseLikes(articleId);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 检查用户是否点赞了文章
+     */
+    @Override
+    public boolean isLiked(Long articleId, Long userId) {
+        if (userId == null) return false;
+        int count = likeMapper.checkLiked(userId, "article", articleId);
+        return count > 0;
+    }
+
+    /**
+     * 收藏/取消收藏文章
+     */
+    @Override
+    @Transactional
+    public boolean collectArticle(Long articleId, Long userId) {
+        log.info("收藏/取消收藏文章: articleId={}, userId={}", articleId, userId);
+
+        // 检查是否已经收藏
+        Collection existingCollection = collectionMapper.getCollectionRecord(userId, "article", articleId);
+
+        if (existingCollection == null) {
+            // 未收藏，新增收藏记录
+            Collection collection = new Collection();
+            collection.setUserId(userId);
+            collection.setTargetType("article");
+            collection.setTargetId(articleId);
+            collection.setStatus(0);
+            int inserted = collectionMapper.insert(collection);
+            return inserted > 0;
+        } else if (existingCollection.getStatus() == 0) {
+            // 已收藏，取消收藏（软删除）
+            existingCollection.setStatus(1);
+            int updated = collectionMapper.updateById(existingCollection);
+            return updated > 0;
+        } else {
+            // 已取消收藏，重新收藏
+            existingCollection.setStatus(0);
+            int updated = collectionMapper.updateById(existingCollection);
+            return updated > 0;
+        }
+    }
+
+    /**
+     * 检查用户是否收藏了文章
+     */
+    @Override
+    public boolean isCollected(Long articleId, Long userId) {
+        if (userId == null) return false;
+        int count = collectionMapper.checkCollected(userId, "article", articleId);
+        return count > 0;
     }
 }
