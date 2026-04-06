@@ -210,12 +210,12 @@ onMounted(() => {
 })
 
 // 查看资讯详情
-const viewNewsDetail = async (id) => {
-  await increaseArticleView(id)
-  await router.push(`/article/detail/${id}`)
+const viewNewsDetail = (id) => {
+  increaseArticleView(id)
+  router.push(`/article/detail/${id}`)
 }
 
-const handleAddArticle =  () => {
+const handleAddArticle = () => {
   router.push('/article')
 }
 

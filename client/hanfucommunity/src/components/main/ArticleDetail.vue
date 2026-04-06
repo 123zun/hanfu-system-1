@@ -128,9 +128,21 @@
                   <el-button
                       link
                       size="small"
+                      :type="comment.liked ? 'primary' : 'default'"
                       @click="handleCommentLike(comment.id)"
                   >
+                    <el-icon><star /></el-icon>
                     点赞 ({{ comment.likes || 0 }})
+                  </el-button>
+                  <el-button
+                      v-if="currentUser && currentUser.id === comment.userId"
+                      link
+                      size="small"
+                      type="danger"
+                      @click="handleDeleteComment(comment.id)"
+                  >
+                    <el-icon><Delete /></el-icon>
+                    删除
                   </el-button>
                 </div>
 
@@ -140,7 +152,7 @@
                       v-model="replyContent"
                       type="textarea"
                       :rows="2"
-                      placeholder="写下你的回复..."
+                      :placeholder="replyToUserName ? '回复 @' + replyToUserName + '：' : '写下你的回复...'"
                       size="small"
                   />
                   <div class="reply-actions">
@@ -156,6 +168,7 @@
                   <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
                     <div class="reply-header">
                       <span class="reply-user">{{ reply.userName }}</span>
+                      <span v-if="reply.replyToUserName" class="reply-to">回复 @{{ reply.replyToUserName }}</span>
                       <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
                     </div>
                     <div class="reply-text">{{ reply.content }}</div>
@@ -163,9 +176,29 @@
                       <el-button
                           link
                           size="small"
+                          @click="toggleReplyInput(comment.id, reply.userName, reply.id)"
+                      >
+                        <el-icon><ChatDotRound /></el-icon>
+                        回复
+                      </el-button>
+                      <el-button
+                          link
+                          size="small"
+                          :type="reply.liked ? 'primary' : 'default'"
                           @click="handleReplyLike(reply.id)"
                       >
+                        <el-icon><star /></el-icon>
                         点赞 ({{ reply.likes || 0 }})
+                      </el-button>
+                      <el-button
+                          v-if="currentUser && currentUser.id === reply.userId"
+                          link
+                          size="small"
+                          type="danger"
+                          @click="handleDeleteComment(reply.id)"
+                      >
+                        <el-icon><Delete /></el-icon>
+                        删除
                       </el-button>
                     </div>
                   </div>
@@ -194,17 +227,18 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
   ArrowLeft,
   View,
   ChatDotRound,
   Star,
   StarFilled,
+  Delete,
   Share,
   Document
 } from '@element-plus/icons-vue'
-import { getArticleDetail,likeArticle, collectArticle } from '@/api/modules/article'
+import { getArticleDetail, likeArticle, collectArticle, getComments, addComment, likeComment as apiLikeComment, deleteComment } from '@/api/modules/article'
 
 const router = useRouter()
 const route = useRoute()
@@ -237,6 +271,8 @@ const commentContent = ref('')
 const submitting = ref(false)
 const replyTarget = ref(null)
 const replyContent = ref('')
+const replyToUserName = ref('')
+const replyToId = ref(null)  // 被回复的评论ID
 const loadingComments = ref(false)
 const hasMoreComments = ref(false)
 let commentPage = 1
@@ -339,50 +375,26 @@ const handleCollect = async () => {
 
 // 加载评论列表
 const loadComments = async () => {
+  if (!articleId.value) return
+
   loadingComments.value = true
   try {
-    // 模拟评论数据
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await getComments('article', articleId.value, currentUser.value?.id)
 
-    if (commentPage === 1) {
-      comments.value = getMockComments()
+    if (response && response.code === 200) {
+      comments.value = response.data || []
     } else {
-      comments.value.push(...getMockComments())
+      console.warn('加载评论失败:', response?.message)
+      comments.value = []
     }
 
-    hasMoreComments.value = comments.value.length < 30
+    hasMoreComments.value = false
   } catch (error) {
     console.error('加载评论失败:', error)
+    comments.value = []
   } finally {
     loadingComments.value = false
   }
-}
-
-// 模拟评论数据
-const getMockComments = () => {
-  return [
-    {
-      id: Date.now(),
-      userId: 1,
-      userName: '汉服爱好者',
-      userAvatar: '',
-      content: '这篇文章写得真好，让我对汉服有了更深的了解！',
-      likes: 5,
-      liked: false,
-      createTime: new Date().toISOString(),
-      replies: [
-        {
-          id: Date.now() + 1,
-          userId: 2,
-          userName: '传统文化传承者',
-          userAvatar: '',
-          content: '是的，汉服文化需要我们共同传承。',
-          likes: 2,
-          createTime: new Date().toISOString()
-        }
-      ]
-    }
-  ]
 }
 
 // 提交评论
@@ -400,22 +412,25 @@ const submitComment = async () => {
 
   submitting.value = true
   try {
-    // 模拟添加评论
-    const newComment = {
-      id: Date.now(),
+    const response = await addComment({
       userId: currentUser.value.id,
-      userName: currentUser.value.username || currentUser.value.nickname,
-      userAvatar: currentUser.value.avatar,
+      targetType: 'article',
+      targetId: articleId.value,
       content: commentContent.value,
-      likes: 0,
-      liked: false,
-      createTime: new Date().toISOString(),
-      replies: []
-    }
+      parentId: null
+    })
 
-    comments.value.unshift(newComment)
-    commentContent.value = ''
-    ElMessage.success('评论成功')
+    if (response && response.code === 200) {
+      // 重新加载评论列表
+      await loadComments()
+      commentContent.value = ''
+      ElMessage.success('评论成功')
+      
+      // 更新文章评论数
+      article.value.comments = (article.value.comments || 0) + 1
+    } else {
+      ElMessage.error(response?.message || '评论失败')
+    }
   } catch (error) {
     console.error('评论失败:', error)
     ElMessage.error('评论失败')
@@ -425,7 +440,7 @@ const submitComment = async () => {
 }
 
 // 显示回复输入框
-const toggleReplyInput = (commentId) => {
+const toggleReplyInput = (commentId, replyToUser = null, replyId = null) => {
   if (!currentUser.value) {
     ElMessage.warning('请先登录')
     router.push('/login')
@@ -433,12 +448,16 @@ const toggleReplyInput = (commentId) => {
   }
   replyTarget.value = replyTarget.value === commentId ? null : commentId
   replyContent.value = ''
+  replyToUserName.value = replyToUser || ''
+  replyToId.value = replyId || null
 }
 
 // 取消回复
 const cancelReply = () => {
   replyTarget.value = null
   replyContent.value = ''
+  replyToUserName.value = ''
+  replyToId.value = null
 }
 
 // 提交回复
@@ -448,24 +467,32 @@ const submitReply = async (commentId) => {
     return
   }
 
-  const comment = comments.value.find(c => c.id === commentId)
-  if (comment) {
-    const newReply = {
-      id: Date.now(),
+  try {
+    const response = await addComment({
       userId: currentUser.value.id,
-      userName: currentUser.value.username,
-      userAvatar: currentUser.value.avatar,
+      targetType: 'article',
+      targetId: articleId.value,
       content: replyContent.value,
-      likes: 0,
-      createTime: new Date().toISOString()
+      parentId: commentId,
+      replyToId: replyToId.value
+    })
+
+    if (response && response.code === 200) {
+      // 重新加载评论列表
+      await loadComments()
+      replyContent.value = ''
+      replyToId.value = null
+      ElMessage.success('回复成功')
+    } else {
+      ElMessage.error(response?.message || '回复失败')
     }
-    if (!comment.replies) comment.replies = []
-    comment.replies.push(newReply)
+  } catch (error) {
+    console.error('回复失败:', error)
+    ElMessage.error('回复失败')
   }
 
   replyTarget.value = null
-  replyContent.value = ''
-  ElMessage.success('回复成功')
+  replyToUserName.value = ''
 }
 
 // 评论点赞
@@ -477,9 +504,20 @@ const handleCommentLike = async (commentId) => {
   }
 
   const comment = findCommentById(commentId)
-  if (comment) {
-    comment.liked = !comment.liked
-    comment.likes += comment.liked ? 1 : -1
+  if (!comment) return
+
+  try {
+    const response = await apiLikeComment(commentId, currentUser.value.id)
+
+    if (response && response.code === 200) {
+      comment.liked = !comment.liked
+      comment.likes += comment.liked ? 1 : -1
+    } else {
+      ElMessage.error(response?.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    ElMessage.error('操作失败')
   }
 }
 
@@ -492,9 +530,48 @@ const handleReplyLike = async (replyId) => {
   }
 
   const reply = findReplyById(replyId)
-  if (reply) {
-    reply.liked = !reply.liked
-    reply.likes += reply.liked ? 1 : -1
+  if (!reply) return
+
+  try {
+    const response = await apiLikeComment(replyId, currentUser.value.id)
+
+    if (response && response.code === 200) {
+      reply.liked = !reply.liked
+      reply.likes += reply.liked ? 1 : -1
+    } else {
+      ElMessage.error(response?.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+// 删除评论
+const handleDeleteComment = async (commentId) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这条评论吗？', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const response = await deleteComment(commentId, currentUser.value.id)
+
+    if (response && response.code === 200) {
+      ElMessage.success('删除成功')
+      // 重新加载评论列表
+      await loadComments()
+      // 更新文章评论数
+      article.value.comments = Math.max(0, (article.value.comments || 1) - 1)
+    } else {
+      ElMessage.error(response?.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除评论失败:', error)
+      ElMessage.error('删除失败')
+    }
   }
 }
 
@@ -866,6 +943,12 @@ const goBack = () => {
   font-size: 13px;
   font-weight: 500;
   color: #333;
+}
+
+.reply-to {
+  font-size: 12px;
+  color: #d4af37;
+  margin: 0 4px;
 }
 
 .reply-time {

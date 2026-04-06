@@ -124,3 +124,50 @@ export const collectArticle = (id, userId) => {
         params: { userId }
     })
 }
+
+// ========== 评论相关 ==========
+
+// 获取评论列表
+export const getComments = (targetType, targetId, userId) => {
+    return request({
+        url: '/comment/list',
+        method: 'GET',
+        params: { targetType, targetId, userId }
+    })
+}
+
+// 添加评论
+export const addComment = (data) => {
+    return request({
+        url: '/comment/add',
+        method: 'POST',
+        data: data
+    })
+}
+
+// 删除评论
+export const deleteComment = (id, userId) => {
+    return request({
+        url: `/comment/delete/${id}`,
+        method: 'DELETE',
+        params: { userId }
+    })
+}
+
+// 点赞/取消点赞评论
+export const likeComment = (id, userId) => {
+    return request({
+        url: `/comment/like/${id}`,
+        method: 'POST',
+        params: { userId }
+    })
+}
+
+// 检查评论点赞状态
+export const checkCommentLiked = (commentId, userId) => {
+    return request({
+        url: '/comment/like/check',
+        method: 'GET',
+        params: { commentId, userId }
+    })
+}
