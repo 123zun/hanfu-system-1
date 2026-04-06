@@ -54,4 +54,15 @@ public interface CommentMapper extends BaseMapper<Comment> {
 
     @Update("UPDATE article SET comments = comments - 1 WHERE id = #{articleId} AND comments > 0")
     int decreaseCommentCount(@Param("articleId") Long articleId);
+
+    // 更新作品评论数
+    @Update("UPDATE work SET comments = comments + 1 WHERE id = #{workId}")
+    int increaseWorkCommentCount(@Param("workId") Long workId);
+
+    @Update("UPDATE work SET comments = comments - 1 WHERE id = #{workId} AND comments > 0")
+    int decreaseWorkCommentCount(@Param("workId") Long workId);
+
+    // 查询作品评论总数（所有status=1的评论）
+    @Select("SELECT COUNT(*) FROM comment WHERE target_type = 'work' AND target_id = #{workId} AND status = 1")
+    int countWorkComments(@Param("workId") Long workId);
 }

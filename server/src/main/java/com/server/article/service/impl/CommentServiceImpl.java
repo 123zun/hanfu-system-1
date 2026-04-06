@@ -61,9 +61,11 @@ public class CommentServiceImpl implements CommentService {
         int inserted = commentMapper.insert(comment);
 
         if (inserted > 0) {
-            // 如果是文章评论，增加文章的评论数
+            // 增加评论数
             if ("article".equals(targetType)) {
                 commentMapper.increaseCommentCount(targetId);
+            } else if ("work".equals(targetType)) {
+                commentMapper.increaseWorkCommentCount(targetId);
             }
 
             CommentDTO dto = new CommentDTO();
@@ -93,8 +95,12 @@ public class CommentServiceImpl implements CommentService {
         comment.setStatus(0);
         int updated = commentMapper.updateById(comment);
 
-        if (updated > 0 && "article".equals(comment.getTargetType())) {
-            commentMapper.decreaseCommentCount(comment.getTargetId());
+        if (updated > 0) {
+            if ("article".equals(comment.getTargetType())) {
+                commentMapper.decreaseCommentCount(comment.getTargetId());
+            } else if ("work".equals(comment.getTargetType())) {
+                commentMapper.decreaseWorkCommentCount(comment.getTargetId());
+            }
         }
 
         return updated > 0;
@@ -157,8 +163,6 @@ public class CommentServiceImpl implements CommentService {
     private CommentDTO convertToDTO(Comment comment, Long currentUserId) {
         CommentDTO dto = new CommentDTO();
         BeanUtils.copyProperties(comment, dto);
-
-        // 填充用户信息（从查询结果中已包含）
 
         // 查询回复
         List<Comment> replies = commentMapper.selectRepliesByParentId(comment.getId());

@@ -54,6 +54,40 @@ const routes = [
         meta: {
             title: '资讯详情'
         }
+    },
+    {
+        path: '/posts',
+        name: 'posts',
+        component: () => import('@/components/main/PostsView.vue'),
+        meta: {
+            title: '互动帖子'
+        }
+    },
+    {
+        path: '/work/create',
+        name: 'work-create',
+        component: () => import('@/components/main/WorkCreate.vue'),
+        meta: {
+            title: '发布帖子',
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/work/edit/:id',
+        name: 'work-edit',
+        component: () => import('@/components/main/WorkCreate.vue'),
+        meta: {
+            title: '编辑帖子',
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/work/detail/:id',
+        name: 'work-detail',
+        component: () => import('@/components/main/WorkDetail.vue'),
+        meta: {
+            title: '帖子详情'
+        }
     }
 ]
 
