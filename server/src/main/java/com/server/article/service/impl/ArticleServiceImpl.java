@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.server.article.dto.ArticleDTO;
+import com.server.article.dto.ArticlePageDTO;
 import com.server.article.dto.ArticleQuery;
 import com.server.article.entity.Article;
 import com.server.article.mapper.ArticleMapper;
@@ -40,7 +41,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
      * 分页查询资讯列表
      */
     @Override
-    public IPage<ArticleDTO> getArticleList(ArticleQuery query, Long currentUserId) {
+    public ArticlePageDTO getArticleList(ArticleQuery query, Long currentUserId) {
         log.info("查询资讯列表: {}", query);
 
         LambdaQueryWrapper<Article> queryWrapper = new LambdaQueryWrapper<>();
@@ -91,12 +92,29 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
             queryWrapper.orderByDesc(Article::getPublishTime);
         }
 
-        // 执行分页查询
-        IPage<Article> page = new Page<>(query.getPage(), query.getSize());
-        IPage<Article> articlePage = this.page(page, queryWrapper);
+        // 执行分页查询（先查总数，再手动分页）
+        long total = baseMapper.selectCount(queryWrapper);
+        log.info("资讯总数: total={}", total);
 
-        // 转换为DTO
-        return articlePage.convert(article -> convertToDTO(article, currentUserId));
+        // 手动设置分页（MyBatis Plus 分页插件可能异常，改用手动截取）
+        List<Article> allArticles = baseMapper.selectList(queryWrapper);
+        int start = (query.getPage() - 1) * query.getSize();
+        int end = Math.min(start + query.getSize(), allArticles.size());
+        List<Article> pagedArticles = start < allArticles.size() ? allArticles.subList(start, end) : List.of();
+
+        // 转换为DTO并构建分页结果
+        List<ArticleDTO> records = pagedArticles.stream()
+                .map(article -> convertToDTO(article, currentUserId))
+                .collect(Collectors.toList());
+
+        long pages = (total + query.getSize() - 1) / query.getSize();
+        return new ArticlePageDTO(
+                records,
+                total,
+                query.getPage(),
+                query.getSize(),
+                pages
+        );
     }
 
     /**

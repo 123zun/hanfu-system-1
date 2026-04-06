@@ -1,8 +1,8 @@
 package com.server.article.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.server.common.R;
 import com.server.article.dto.ArticleDTO;
+import com.server.article.dto.ArticlePageDTO;
 import com.server.article.dto.ArticleQuery;
 import com.server.article.service.ArticleService;
 import lombok.extern.slf4j.Slf4j;
@@ -176,7 +176,7 @@ public class ArticleController {
             query.setSortField(sortField);
             query.setSortOrder(sortOrder);
 
-            IPage<ArticleDTO> result = articleService.getArticleList(query, userId);
+            ArticlePageDTO result = articleService.getArticleList(query, userId);
             return R.success("获取成功", result);
 
         } catch (Exception e) {

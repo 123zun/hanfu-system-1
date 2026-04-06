@@ -2,6 +2,7 @@ package com.server.article.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.server.article.dto.ArticleDTO;
+import com.server.article.dto.ArticlePageDTO;
 import com.server.article.dto.ArticleQuery;
 import java.util.List;
 
@@ -10,7 +11,7 @@ public interface ArticleService {
     /**
      * 分页查询资讯列表
      */
-    IPage<ArticleDTO> getArticleList(ArticleQuery query, Long currentUserId);
+    ArticlePageDTO getArticleList(ArticleQuery query, Long currentUserId);
 
     /**
      * 获取热门资讯

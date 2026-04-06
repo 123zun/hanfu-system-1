@@ -150,18 +150,19 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 加载更多 -->
-      <div class="load-more">
-        <el-button
-            type="primary"
-            :loading="loading"
-            @click="loadMore"
-            class="load-more-btn"
-        >
-          {{ loading ? '加载中...' : '加载更多' }}
-        </el-button>
+        <!-- 分页 -->
+        <div class="pagination-wrapper" v-if="total > 0">
+          <el-pagination
+              v-model:current-page="currentPage"
+              v-model:page-size="pageSize"
+              :page-sizes="[6, 10, 15]"
+              :total="total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -199,9 +200,9 @@ const featuredList = reactive([])  // 热门资讯
 const newsList = reactive([])  // 普通资讯
 
 // 分页参数
-let currentPage = 1
-const pageSize = 6
-let hasMore = true
+const currentPage = ref(1)
+const pageSize = ref(6)
+const total = ref(0)
 
 // 页面加载
 onMounted(() => {
@@ -359,9 +360,10 @@ const loadHotArticles = async () => {
 // 加载资讯列表
 const loadArticles = async () => {
   try {
+    loading.value = true
     const params = {
-      page: currentPage,
-      size: pageSize
+      page: currentPage.value,
+      size: pageSize.value
     }
 
     if (categoryFilter.value) {
@@ -374,22 +376,22 @@ const loadArticles = async () => {
 
     const response = await getArticleList(params)
 
+    console.log("资讯列表",response);
+
     if (response && response.code === 200) {
       const data = response.data
 
       if (data && data.records) {
-        // 如果是第一页，清空原有数据
-        if (currentPage === 1) {
-          newsList.length = 0
-        }
+        // 清空原有数据
+        newsList.length = 0
 
         // 添加新的数据
         data.records.forEach(item => {
           newsList.push(item)
         })
 
-        // 检查是否还有更多数据
-        hasMore = data.current * data.size < data.total
+        // 更新总数
+        total.value = data.total || 0
 
         // 如果热门资讯为空，用前2条普通资讯作为热门
         if (featuredList.length === 0 && data.records.length >= 2) {
@@ -403,6 +405,7 @@ const loadArticles = async () => {
           data.forEach(item => {
             newsList.push(item)
           })
+          total.value = data.length || 0
 
           if (featuredList.length === 0 && data.length >= 2) {
             featuredList.length = 0
@@ -415,37 +418,35 @@ const loadArticles = async () => {
     }
   } catch (error) {
     console.error('加载资讯失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 // 搜索资讯
 const handleSearch = () => {
-  if (searchKeyword.value) {
-    currentPage = 1
-    loadArticles()
-  }
+  currentPage.value = 1
+  loadArticles()
 }
 
 // 刷新资讯
 const refreshNews = () => {
-  currentPage = 1
+  currentPage.value = 1
   loadInitialData()
   ElMessage.success('资讯已刷新')
 }
 
-// 加载更多
-const loadMore = () => {
-  if (!hasMore) {
-    ElMessage.info('没有更多资讯了')
-    return
-  }
+// 分页大小改变
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  currentPage.value = 1
+  loadArticles()
+}
 
-  loading.value = true
-  currentPage++
-
-  loadArticles().finally(() => {
-    loading.value = false
-  })
+// 页码改变
+const handleCurrentChange = (val) => {
+  currentPage.value = val
+  loadArticles()
 }
 
 // 辅助函数：格式化日期
@@ -483,7 +484,7 @@ const getImageUrl = (path) => {
 
 // 分类筛选
 const handleCategoryChange = () => {
-  currentPage = 1
+  currentPage.value = 1
   loadArticles()
 }
 
@@ -837,6 +838,26 @@ const getCategoryName = (categoryCode) => {
   opacity: 0.9;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+/* 分页样式 */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+  padding: 20px 0;
+}
+
+.pagination-wrapper :deep(.el-pagination) {
+  font-weight: 500;
+}
+
+.pagination-wrapper :deep(.el-pagination__total) {
+  font-size: 14px;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-select .el-input) {
+  width: 110px;
 }
 
 /* 响应式设计 */
