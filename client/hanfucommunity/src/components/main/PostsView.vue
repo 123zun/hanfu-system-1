@@ -325,7 +325,7 @@ const handleCurrentChange = (val) => {
 // 获取图片URL
 const getImageUrl = (path) => {
   if (!path) {
-    return 'https://images.unsplash.com/photo-1544717305-99670f9c28f4?auto=format&fit=crop&w=400&q=80'
+    return 'http://localhost:8080/default/tiezidefault.png'
   }
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path

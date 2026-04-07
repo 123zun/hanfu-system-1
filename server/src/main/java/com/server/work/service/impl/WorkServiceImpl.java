@@ -139,7 +139,7 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         work.setDescription(workDTO.getDescription());
         work.setType(workDTO.getType());
         work.setUserId(userId);
-        work.setCoverImage(workDTO.getCoverImage());
+        work.setCoverImage(workDTO.getCoverImage() != null && !workDTO.getCoverImage().isEmpty() ? workDTO.getCoverImage() : "http://localhost:8080/default/tiezidefault.png");
         work.setImages(toJson(workDTO.getImages()));
         work.setTags(toJson(workDTO.getTags()));
         work.setViews(0);
@@ -171,8 +171,10 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         if (StringUtils.hasText(workDTO.getType())) {
             work.setType(workDTO.getType());
         }
-        if (workDTO.getCoverImage() != null) {
+        if (workDTO.getCoverImage() != null && !workDTO.getCoverImage().isEmpty()) {
             work.setCoverImage(workDTO.getCoverImage());
+        } else {
+            work.setCoverImage("http://localhost:8080/default/tiezidefault.png");
         }
         if (workDTO.getImages() != null) {
             work.setImages(toJson(workDTO.getImages()));

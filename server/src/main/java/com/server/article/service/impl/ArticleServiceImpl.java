@@ -185,6 +185,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         article.setComments(0);
         article.setPublishTime(LocalDateTime.now());
 
+        // 设置封面图片默认值
+        if (!StringUtils.hasText(article.getCoverImage())) {
+            article.setCoverImage("http://localhost:8080/default/zixundefault.png");
+        }
+
         boolean saved = this.save(article);
 
         if (saved) {

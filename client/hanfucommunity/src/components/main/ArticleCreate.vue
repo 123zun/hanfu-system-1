@@ -55,7 +55,7 @@
         </el-form-item>
 
         <!-- 封面图 -->
-        <el-form-item label="封面图">
+        <el-form-item label="封&ensp;面&ensp;图">
           <div class="cover-upload">
             <div
                 v-if="!articleForm.coverImage"

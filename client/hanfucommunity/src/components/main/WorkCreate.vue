@@ -25,7 +25,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="封面图">
+        <el-form-item label="封&ensp;面&ensp;图">
           <div class="cover-upload">
             <div v-if="!workForm.coverImage" class="upload-area" @click="triggerCoverUpload">
               <el-icon class="upload-icon"><Picture /></el-icon>
