@@ -243,7 +243,7 @@ import {
 import NewsView from '@/components/main/NewsView.vue'
 import ProfileView from '@/components/main/ProfileView.vue'
 import PostsView from '@/components/main/PostsView.vue'
-import ActivitiesView from '@/components/main/ActivitiesView.vue'
+import ActivitiesView from '@/components/main/ActivityView.vue'
 import ResourcesView from '@/components/main/ResourcesView.vue'
 
 const router = useRouter()

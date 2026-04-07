@@ -88,6 +88,15 @@ const routes = [
         meta: {
             title: '帖子详情'
         }
+    },
+    {
+        path: '/activity',
+        name: 'activity',
+        component: () => import('@/components/main/ActivityView.vue'),
+        meta: {
+            title: '活动中心',
+            requiresAuth: true
+        }
     }
 ]
 
