@@ -35,7 +35,6 @@
         <el-option label="图片" value="image" />
         <el-option label="视频" value="video" />
         <el-option label="文档" value="document" />
-        <el-option label="其他" value="other" />
       </el-select>
 
       <el-button type="primary" icon="Refresh" @click="refreshResources">刷新</el-button>
@@ -200,7 +199,6 @@
             <el-option label="图片" value="image" />
             <el-option label="视频" value="video" />
             <el-option label="文档" value="document" />
-            <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
 
@@ -236,12 +234,61 @@
       </template>
     </el-dialog>
 
+    <!-- 编辑对话框 -->
+    <el-dialog
+        v-model="showEditDialog"
+        title="编辑资源"
+        width="600px"
+        :close-on-click-modal="false"
+        :lock-scroll="false"
+    >
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="资源标题" required>
+          <el-input v-model="editForm.title" placeholder="请输入资源标题" />
+        </el-form-item>
+
+        <el-form-item label="资源描述">
+          <el-input
+              v-model="editForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入资源描述"
+          />
+        </el-form-item>
+
+        <el-form-item label="资源类型" required>
+          <el-select v-model="editForm.type" placeholder="请选择类型" style="width: 100%">
+            <el-option label="图片" value="image" />
+            <el-option label="视频" value="video" />
+            <el-option label="文档" value="document" />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="文件信息">
+          <div class="edit-file-info">
+            <span>文件名：{{ editForm.fileUrl ? editForm.fileUrl.split('/').pop() : '未知' }}</span>
+            <span class="ml-10">大小：{{ editForm.fileSizeFormat || '未知' }}</span>
+            <span class="ml-10">上传者：{{ editForm.uploaderName || '未知' }}</span>
+          </div>
+          <div class="edit-file-tip">如需更换文件，请删除后重新上传</div>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdate" :loading="updateLoading">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
+
     <!-- 预览对话框 -->
     <el-dialog
         v-model="showPreviewDialog"
         :title="previewItem?.title"
         width="800px"
         class="preview-dialog"
+        :lock-scroll="false"
     >
       <!-- 图片预览 -->
       <div v-if="previewItem?.type === 'image'" class="preview-content">
@@ -260,15 +307,19 @@
         </video>
       </div>
 
-      <!-- 文档预览 -->
+      <!-- 文档预览（通过后端预览接口内嵌显示） -->
       <div v-else class="preview-content preview-document-detail">
-        <el-icon size="64"><Document /></el-icon>
-        <p>{{ previewItem?.title }}</p>
-        <p class="file-info">{{ previewItem?.fileSizeFormat }}</p>
-        <el-button type="primary" @click="handleDownload(previewItem?.id)">
-          <el-icon><Download /></el-icon>
-          下载文件
-        </el-button>
+        <iframe
+            :src="`http://localhost:8080/api/resource/file/${previewItem?.id}?preview=true`"
+            class="preview-doc-frame"
+            frameborder="0"
+        />
+        <div class="preview-doc-footer">
+          <el-button type="primary" @click="handleDownload(previewItem?.id)">
+            <el-icon><Download /></el-icon>
+            下载文件
+          </el-button>
+        </div>
       </div>
 
       <!-- 文件信息 -->
@@ -352,6 +403,19 @@ const uploadForm = reactive({
 const showPreviewDialog = ref(false)
 const previewItem = ref(null)
 
+// 编辑对话框
+const showEditDialog = ref(false)
+const updateLoading = ref(false)
+const editForm = reactive({
+  id: null,
+  title: '',
+  description: '',
+  type: 'document',
+  fileUrl: '',
+  fileSizeFormat: '',
+  uploaderName: ''
+})
+
 // 当前用户
 const getCurrentUser = () => {
   try {
@@ -407,7 +471,7 @@ const loadResources = async () => {
 // 加载各类型统计
 const loadTypeStats = async () => {
   try {
-    const types = ['image', 'video', 'document', 'other']
+    const types = ['image', 'video', 'document']
     for (const type of types) {
       const response = await getResourceList({ type, size: 1, status: 1 })
       if (response && response.code === 200 && response.data) {
@@ -518,14 +582,20 @@ const handlePreview = (item) => {
   showPreviewDialog.value = true
 }
 
-// 下载
+// 下载（通过隐藏iframe触发真实下载）
 const handleDownload = async (id) => {
   try {
     const response = await downloadResource(id)
 
     if (response && response.code === 200) {
-      const data = response.data
-      window.open(data.fileUrl, '_blank')
+      // 通过隐藏的iframe访问后端下载接口，后端设置 Content-Disposition: attachment 强制下载
+      const iframe = document.createElement('iframe')
+      iframe.style.display = 'none'
+      iframe.src = `http://localhost:8080/api/resource/file/${id}`
+      document.body.appendChild(iframe)
+      setTimeout(() => {
+        document.body.removeChild(iframe)
+      }, 5000)
       ElMessage.success('开始下载')
       loadResources()
     } else {
@@ -539,23 +609,46 @@ const handleDownload = async (id) => {
 
 // 编辑
 const handleEdit = (item) => {
-  ElMessageBox.prompt('请输入新的资源标题', '编辑资源', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputValue: item.title
-  }).then(async ({ value }) => {
-    try {
-      const response = await updateResource(item.id, { title: value })
-      if (response && response.code === 200) {
-        ElMessage.success('更新成功')
-        loadResources()
-      } else {
-        ElMessage.error(response?.message || '更新失败')
-      }
-    } catch (error) {
-      ElMessage.error('更新失败')
+  // 回显编辑表单
+  editForm.id = item.id
+  editForm.title = item.title || ''
+  editForm.description = item.description || ''
+  editForm.type = item.type || 'document'
+  editForm.fileUrl = item.fileUrl || ''
+  editForm.fileSizeFormat = item.fileSizeFormat || ''
+  editForm.uploaderName = item.uploaderName || ''
+  showEditDialog.value = true
+}
+
+// 保存编辑
+const handleUpdate = async () => {
+  if (!editForm.title) {
+    ElMessage.warning('请输入资源标题')
+    return
+  }
+
+  try {
+    updateLoading.value = true
+
+    const response = await updateResource(editForm.id, {
+      title: editForm.title,
+      description: editForm.description,
+      type: editForm.type
+    })
+
+    if (response && response.code === 200) {
+      ElMessage.success('更新成功')
+      showEditDialog.value = false
+      loadResources()
+    } else {
+      ElMessage.error(response?.message || '更新失败')
     }
-  }).catch(() => {})
+  } catch (error) {
+    console.error('更新失败:', error)
+    ElMessage.error('更新失败，请稍后重试')
+  } finally {
+    updateLoading.value = false
+  }
 }
 
 // 删除
@@ -610,9 +703,8 @@ const getTypeName = (type) => {
     image: '图片',
     video: '视频',
     document: '文档',
-    other: '其他'
   }
-  return typeMap[type] || '其他'
+  return typeMap[type] || '文档'
 }
 
 const formatDate = (dateString) => {
@@ -990,6 +1082,23 @@ const formatDate = (dateString) => {
 .info-item .label {
   color: #666;
   width: 80px;
+}
+
+/* 编辑对话框 */
+.edit-file-info {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.edit-file-info .ml-10 {
+  margin-left: 15px;
+}
+
+.edit-file-tip {
+  color: #999;
+  font-size: 0.8rem;
+  margin-top: 5px;
 }
 
 .info-item span:last-child {

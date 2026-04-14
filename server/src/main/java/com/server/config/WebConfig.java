@@ -11,7 +11,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // 映射 /uploads/** 到实际目录
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:./uploads/")  // 相对路径
-                .setCachePeriod(0); // 开发环境禁用缓存
+                .addResourceLocations("file:./uploads/")
+                .setCachePeriod(0);
     }
 }

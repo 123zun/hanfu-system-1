@@ -6,8 +6,8 @@ import com.server.resource.dto.ResourcePageDTO;
 import com.server.resource.dto.ResourceQuery;
 import com.server.resource.entity.Resource;
 import com.server.resource.service.ResourceService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,7 +98,6 @@ public class ResourceController {
 
             // 9. 构建资源信息并保存到数据库
             ResourceDTO resourceDTO = new ResourceDTO();
-            // 如果没有传标题，用原始文件名
             resourceDTO.setTitle(title != null && !title.isEmpty() ? title : originalFilename);
             resourceDTO.setDescription(description);
             resourceDTO.setType(type);
@@ -111,7 +111,6 @@ public class ResourceController {
             ResourceDTO savedResource = resourceService.createResource(resourceDTO);
 
             if (savedResource == null) {
-                // 数据库保存失败，删除已上传的文件
                 destFile.delete();
                 return R.error("资源保存失败");
             }
@@ -140,7 +139,72 @@ public class ResourceController {
     }
 
     /**
-     * 下载资源文件
+     * 预览/下载文件（通过URL参数区分preview或download）
+     */
+    @GetMapping("/file/{id}")
+    public void serveFile(@PathVariable Long id,
+                          @RequestParam(required = false, defaultValue = "false") Boolean preview,
+                          HttpServletResponse response) {
+        log.info("服务文件: id={}, preview={}", id, preview);
+
+        try {
+            ResourceDTO resource = resourceService.getResourceDetail(id, null);
+
+            if (resource == null || resource.getFileUrl() == null) {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 提取文件路径
+            String fileUrl = resource.getFileUrl();
+            String filePath = fileUrl.replace("http://localhost:8080", "");
+            String fullPath = System.getProperty("user.dir") + filePath.replace("/", File.separator);
+
+            File file = new File(fullPath);
+            if (!file.exists() || !file.isFile()) {
+                log.error("文件不存在: {}", fullPath);
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+
+            // 根据文件类型设置MIME类型
+            String contentType = Files.probeContentType(file.toPath());
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            // preview=true用inline（浏览器内嵌显示），否则用attachment（下载）
+            String disposition = preview
+                    ? "inline"
+                    : "attachment; filename=" + java.net.URLEncoder.encode(file.getName(), "UTF-8");
+
+            // 预览不增加下载次数
+            if (!preview) {
+                resourceService.increaseDownloadCount(id);
+            }
+
+            response.setContentType(contentType);
+            response.setHeader("Content-Disposition", disposition);
+            response.setHeader("Content-Length", String.valueOf(file.length()));
+            response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+            response.setHeader("Access-Control-Allow-Origin", "*");
+            response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+
+            Files.copy(file.toPath(), response.getOutputStream());
+            response.flushBuffer();
+
+        } catch (Exception e) {
+            log.error("文件服务失败", e);
+            try {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            } catch (Exception ex) {
+                log.error("设置响应状态失败", ex);
+            }
+        }
+    }
+
+    /**
+     * 获取资源下载信息
      */
     @GetMapping("/download/{id}")
     public R<?> downloadResource(@PathVariable Long id) {
@@ -379,9 +443,6 @@ public class ResourceController {
 
     // ==================== 私有工具方法 ====================
 
-    /**
-     * 获取文件扩展名
-     */
     private String getFileExtension(String filename) {
         int dotIndex = filename.lastIndexOf(".");
         if (dotIndex > 0) {
@@ -390,9 +451,6 @@ public class ResourceController {
         return "";
     }
 
-    /**
-     * 根据文件扩展名判断文件类型
-     */
     private String determineFileType(String extension) {
         String[] imageExts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"};
         String[] videoExts = {".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm"};
@@ -410,9 +468,6 @@ public class ResourceController {
         return "other";
     }
 
-    /**
-     * 格式化文件大小
-     */
     private String formatFileSize(long bytes) {
         if (bytes == 0) return "0 B";
         String[] units = {"B", "KB", "MB", "GB", "TB"};
