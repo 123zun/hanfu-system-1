@@ -167,16 +167,18 @@ public class ResourceController {
                 return;
             }
 
-            // 根据文件类型设置MIME类型
-            String contentType = Files.probeContentType(file.toPath());
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
+            // 根据文件扩展名设置正确的MIME类型，确保浏览器能内嵌显示
+            String ext = file.getName().substring(file.getName().lastIndexOf(".")).toLowerCase();
+            String contentType = getMimeType(ext);
 
             // preview=true用inline（浏览器内嵌显示），否则用attachment（下载）
+            // 下载时文件名使用资源标题，保留原始扩展名
+            String downloadFilename = (resource.getTitle() != null && !resource.getTitle().isEmpty())
+                    ? resource.getTitle() + ext
+                    : file.getName();
             String disposition = preview
-                    ? "inline"
-                    : "attachment; filename=" + java.net.URLEncoder.encode(file.getName(), "UTF-8");
+                    ? "inline; filename=" + java.net.URLEncoder.encode(file.getName(), "UTF-8")
+                    : "attachment; filename=" + java.net.URLEncoder.encode(downloadFilename, "UTF-8");
 
             // 预览不增加下载次数
             if (!preview) {
@@ -466,6 +468,28 @@ public class ResourceController {
             if (ext.equals(extension)) return "document";
         }
         return "other";
+    }
+
+    private String getMimeType(String ext) {
+        return switch (ext) {
+            case ".pdf" -> "application/pdf";
+            case ".doc" -> "application/msword";
+            case ".docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case ".xls" -> "application/vnd.ms-excel";
+            case ".xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case ".ppt" -> "application/vnd.ms-powerpoint";
+            case ".pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case ".txt" -> "text/plain";
+            case ".png" -> "image/png";
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".gif" -> "image/gif";
+            case ".webp" -> "image/webp";
+            case ".mp4" -> "video/mp4";
+            case ".avi" -> "video/x-msvideo";
+            case ".mov" -> "video/quicktime";
+            case ".wmv" -> "video/x-ms-wmv";
+            default -> "application/octet-stream";
+        };
     }
 
     private String formatFileSize(long bytes) {

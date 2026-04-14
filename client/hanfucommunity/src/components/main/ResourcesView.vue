@@ -126,7 +126,7 @@
               link
               size="small"
               icon="View"
-              @click="handlePreview(item)"
+              @click="handlePreviewClick(item)"
           >预览</el-button>
           <el-button
               type="success"
@@ -582,20 +582,24 @@ const handlePreview = (item) => {
   showPreviewDialog.value = true
 }
 
-// 下载（通过隐藏iframe触发真实下载）
+// 预览按钮点击（区分文档和其他类型）
+const handlePreviewClick = (item) => {
+  if (item.type === 'document') {
+    // 文档直接用文件路径在新窗口打开
+    window.open(item.fileUrl, '_blank')
+  } else {
+    handlePreview(item)
+  }
+}
+
+// 下载（通过后端接口触发真实下载，文件名使用资源标题）
 const handleDownload = async (id) => {
   try {
     const response = await downloadResource(id)
 
     if (response && response.code === 200) {
-      // 通过隐藏的iframe访问后端下载接口，后端设置 Content-Disposition: attachment 强制下载
-      const iframe = document.createElement('iframe')
-      iframe.style.display = 'none'
-      iframe.src = `http://localhost:8080/api/resource/file/${id}`
-      document.body.appendChild(iframe)
-      setTimeout(() => {
-        document.body.removeChild(iframe)
-      }, 5000)
+      // 后端接口使用资源标题作为文件名
+      window.location.href = `http://localhost:8080/api/resource/file/${id}`
       ElMessage.success('开始下载')
       loadResources()
     } else {
