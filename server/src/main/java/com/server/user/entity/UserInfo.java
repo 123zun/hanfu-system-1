@@ -44,7 +44,10 @@ public class UserInfo {
     private String age;
 
     @TableField("avatar")
-    private String avatar = "/uploads/avatars/default.jpg";
+    private String avatar = "http://localhost:8080/uploads/avatars/default.jpg";
+
+    @TableField("status")
+    private Integer status = 1;  // 1-正常，0-已删除
 
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;

@@ -22,7 +22,7 @@ export const register = (data) => {
 export const getUserInfo = (data) => {
     return request({
         url: '/user/info',
-        method: 'Post',
+        method: 'POST',
         data
     })
 }
@@ -31,7 +31,7 @@ export const getUserInfo = (data) => {
 export const updateUserInfo = (data) => {
     return request({
         url: '/user/update',
-        method: 'Post',
+        method: 'POST',
         data
     })
 }
@@ -53,7 +53,6 @@ export const logout = () => {
     })
 }
 
-// src/api/modules/user.js
 // 上传头像
 export const uploadAvatar = (formData) => {
     return request({
@@ -64,5 +63,48 @@ export const uploadAvatar = (formData) => {
             'Content-Type': 'multipart/form-data'
         },
         showLoading: false
+    })
+}
+
+// ==================== 用户管理（后台） ====================
+
+// 获取用户列表（分页+搜索）
+export const getUserList = (params) => {
+    return request({
+        url: '/user/users',
+        method: 'GET',
+        params: {
+            pageNum: params?.pageNum || 1,
+            pageSize: params?.pageSize || 10,
+            username: params?.username,
+            email: params?.email,
+            gender: params?.gender
+        }
+    })
+}
+
+// 删除用户
+export const deleteUser = (id) => {
+    return request({
+        url: `/user/user/${id}`,
+        method: 'DELETE'
+    })
+}
+
+// 添加用户
+export const addUser = (data) => {
+    return request({
+        url: '/user/register',
+        method: 'POST',
+        data
+    })
+}
+
+// 更新用户信息（管理员）
+export const updateUser = (data) => {
+    return request({
+        url: '/user/update',
+        method: 'POST',
+        data
     })
 }

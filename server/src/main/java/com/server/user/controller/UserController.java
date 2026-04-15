@@ -84,7 +84,18 @@ public class UserController {
 
     // 获取用户列表
     @GetMapping("/users")
-    public R<?> getUserList(@RequestParam Map<String, Object> params) {
+    public R<?> getUserList(
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String gender,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        java.util.Map<String, Object> params = new java.util.HashMap<>();
+        params.put("username", username);
+        params.put("email", email);
+        params.put("gender", gender);
+        params.put("pageNum", pageNum);
+        params.put("pageSize", pageSize);
         return userService.getUserList(params);
     }
 

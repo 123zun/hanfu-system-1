@@ -35,6 +35,11 @@ public class UserServiceImpl implements UserService {
             userInfo.setCreateTime(now);
             userInfo.setUpdateTime(now);
 
+            // 2. 设置默认头像
+            if (userInfo.getAvatar() == null || userInfo.getAvatar().isEmpty()) {
+                userInfo.setAvatar("http://localhost:8080/uploads/avatars/default.jpg");
+            }
+
             // 3. 尝试插入（让数据库唯一约束来保证唯一性）
             int result = userMapper.insert(userInfo);
 
@@ -200,14 +205,29 @@ public class UserServiceImpl implements UserService {
     @Override
     public R<?> getUserList(Map<String, Object> params) {
         // 获取分页参数
-        Integer pageNum = (Integer) params.getOrDefault("pageNum", 1);
-        Integer pageSize = (Integer) params.getOrDefault("pageSize", 10);
+        Integer pageNum = 1;
+        Integer pageSize = 10;
+        try {
+            Object pn = params.get("pageNum");
+            Object ps = params.get("pageSize");
+            if (pn instanceof Integer) pageNum = (Integer) pn;
+            else if (pn != null) pageNum = Integer.parseInt(pn.toString());
+            if (ps instanceof Integer) pageSize = (Integer) ps;
+            else if (ps != null) pageSize = Integer.parseInt(ps.toString());
+        } catch (Exception e) {
+            // 使用默认值
+        }
+
+        System.out.println("=== getUserList: pageNum=" + pageNum + ", pageSize=" + pageSize + " ===");
 
         // 创建分页对象
         Page<UserInfo> page = new Page<>(pageNum, pageSize);
 
         // 创建查询条件
         LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+
+        // 只查询未删除的用户
+        wrapper.eq(UserInfo::getStatus, 1);
 
         // 添加条件
         if (params.get("username") != null) {
@@ -231,18 +251,32 @@ public class UserServiceImpl implements UserService {
 
         // 执行分页查询
         IPage<UserInfo> resultPage = userMapper.selectPage(page, wrapper);
+        System.out.println("=== getUserList result: total=" + resultPage.getTotal() + ", records=" + resultPage.getRecords().size() + " ===");
+
+        // 强制修正total（防止COUNT查询失败导致total为0）
+        long total = resultPage.getTotal();
+        if (total == 0 && !resultPage.getRecords().isEmpty()) {
+            LambdaQueryWrapper<UserInfo> countWrapper = new LambdaQueryWrapper<>();
+            countWrapper.eq(UserInfo::getStatus, 1);
+            if (params.get("username") != null) countWrapper.like(UserInfo::getUsername, params.get("username"));
+            if (params.get("email") != null) countWrapper.like(UserInfo::getEmail, params.get("email"));
+            if (params.get("gender") != null) countWrapper.eq(UserInfo::getGender, params.get("gender"));
+            total = userMapper.selectCount(countWrapper);
+            System.out.println("=== corrected total=" + total + " ===");
+        }
 
         // 隐藏密码
         for (UserInfo user : resultPage.getRecords()) {
             user.setPassword(null);
         }
 
+        // 构建返回数据
         Map<String, Object> data = new HashMap<>();
-        data.put("list", resultPage.getRecords());
-        data.put("total", resultPage.getTotal());
+        data.put("records", resultPage.getRecords());
+        data.put("total", total);
         data.put("pages", resultPage.getPages());
-        data.put("current", resultPage.getCurrent());
-        data.put("size", resultPage.getSize());
+        data.put("pageNum", resultPage.getCurrent());
+        data.put("pageSize", resultPage.getSize());
 
         return R.success(data);
     }
@@ -250,7 +284,13 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R<?> deleteUser(Long id) {
-        int result = userMapper.deleteById(id);
+        // 逻辑删除：将status置为0
+        UserInfo user = userMapper.selectById(id);
+        if (user == null) {
+            return R.error("用户不存在");
+        }
+        user.setStatus(0);
+        int result = userMapper.updateById(user);
         if (result > 0) {
             return R.success("删除成功");
         }

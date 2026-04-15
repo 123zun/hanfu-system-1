@@ -35,6 +35,10 @@
               <el-icon><Collection /></el-icon>
               资源
             </el-menu-item>
+            <el-menu-item index="users">
+              <el-icon><UserFilled /></el-icon>
+              用户管理
+            </el-menu-item>
             <el-menu-item index="profile">
               <el-icon><User /></el-icon>
               个人中心
@@ -227,6 +231,7 @@ import {
   Calendar,
   Collection,
   User,
+  UserFilled,
   SwitchButton,
   ChatDotRound,
   VideoCamera,
@@ -245,6 +250,7 @@ import ProfileView from '@/components/main/ProfileView.vue'
 import PostsView from '@/components/main/PostsView.vue'
 import ActivitiesView from '@/components/main/ActivityView.vue'
 import ResourcesView from '@/components/main/ResourcesView.vue'
+import UsersView from '@/components/main/UsersView.vue'
 
 const router = useRouter()
 
@@ -266,6 +272,7 @@ const componentMap = {
   posts: markRaw(PostsView),
   activities: markRaw(ActivitiesView),
   resources: markRaw(ResourcesView),
+  users: markRaw(UsersView),
   profile: markRaw(ProfileView)
 }
 
