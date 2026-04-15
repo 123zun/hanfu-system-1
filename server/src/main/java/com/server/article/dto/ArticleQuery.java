@@ -11,6 +11,7 @@ public class ArticleQuery {
     private Integer status = 1;  // 默认只查已发布的
     private Integer isTop;       // 是否置顶
     private Integer isHot;       // 是否热门
+    private Long userId;        // 用户ID筛选
     private String sortField = "publish_time";  // 排序字段
     private String sortOrder = "desc";          // 排序方向
 }

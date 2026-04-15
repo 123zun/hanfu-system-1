@@ -175,6 +175,7 @@ public class ArticleController {
             query.setIsHot(isHot);
             query.setSortField(sortField);
             query.setSortOrder(sortOrder);
+            query.setUserId(userId);
 
             ArticlePageDTO result = articleService.getArticleList(query, userId);
             return R.success("获取成功", result);
@@ -389,6 +390,20 @@ public class ArticleController {
         } catch (Exception e) {
             log.error("查询收藏状态失败", e);
             return R.error("查询失败");
+        }
+    }
+
+    /**
+     * 获取用户收藏的资讯列表
+     */
+    @GetMapping("/my-collections")
+    public R<?> getMyCollections(@RequestParam Long userId) {
+        try {
+            log.info("获取用户收藏资讯: userId={}", userId);
+            return R.success(articleService.getUserCollections(userId));
+        } catch (Exception e) {
+            log.error("获取收藏列表失败", e);
+            return R.error("获取失败");
         }
     }
 

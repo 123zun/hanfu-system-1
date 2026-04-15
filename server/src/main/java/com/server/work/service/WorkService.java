@@ -71,4 +71,9 @@ public interface WorkService {
      * 统计活跃帖子数（排除已删除）
      */
     long countActiveWorks();
+
+    /**
+     * 获取用户收藏的作品列表
+     */
+    List<WorkDTO> getUserCollections(Long userId);
 }

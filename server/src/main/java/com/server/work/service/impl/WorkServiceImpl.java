@@ -371,4 +371,22 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         wrapper.eq(Work::getStatus, 1);
         return workMapper.selectCount(wrapper);
     }
+
+    @Override
+    public List<WorkDTO> getUserCollections(Long userId) {
+        if (userId == null) return List.of();
+        LambdaQueryWrapper<com.server.entity.Collection> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(com.server.entity.Collection::getUserId, userId)
+               .eq(com.server.entity.Collection::getTargetType, "work")
+               .eq(com.server.entity.Collection::getStatus, 0);
+        List<com.server.entity.Collection> collections = collectionMapper.selectList(wrapper);
+        List<WorkDTO> result = new java.util.ArrayList<>();
+        for (com.server.entity.Collection c : collections) {
+            Work work = workMapper.selectById(c.getTargetId());
+            if (work != null && work.getStatus() == 1) {
+                result.add(convertToDTO(work, userId));
+            }
+        }
+        return result;
+    }
 }

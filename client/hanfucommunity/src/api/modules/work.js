@@ -190,3 +190,12 @@ export const getHotWorks = (limit = 5) => {
         params: { limit }
     })
 }
+
+// 获取用户收藏的作品列表
+export const getMyWorkCollections = (userId) => {
+    return request({
+        url: '/work/my-collections',
+        method: 'GET',
+        params: { userId }
+    })
+}

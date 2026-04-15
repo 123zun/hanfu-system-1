@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import com.server.entity.Likes;
 import com.server.entity.Collection;
+import com.server.entity.Likes;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -77,6 +78,11 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         // 热门筛选
         if (query.getIsHot() != null) {
             queryWrapper.eq(Article::getIsHot, query.getIsHot());
+        }
+
+        // 用户ID筛选
+        if (query.getUserId() != null) {
+            queryWrapper.eq(Article::getAuthorId, query.getUserId());
         }
 
         // 排序
@@ -451,5 +457,24 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Article::getStatus, 1);
         return articleMapper.selectCount(wrapper);
+    }
+
+    @Override
+    public List<ArticleDTO> getUserCollections(Long userId) {
+        if (userId == null) return List.of();
+        // 查询用户收藏的资讯记录（status=0表示正常收藏）
+        LambdaQueryWrapper<Collection> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Collection::getUserId, userId)
+               .eq(Collection::getTargetType, "article")
+               .eq(Collection::getStatus, 0);
+        List<Collection> collections = collectionMapper.selectList(wrapper);
+        List<ArticleDTO> result = new java.util.ArrayList<>();
+        for (Collection c : collections) {
+            Article article = articleMapper.selectById(c.getTargetId());
+            if (article != null && article.getStatus() == 1) {
+                result.add(convertToDTO(article, userId));
+            }
+        }
+        return result;
     }
 }

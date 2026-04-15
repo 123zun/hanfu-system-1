@@ -74,4 +74,9 @@ public interface ArticleService {
      * 统计活跃资讯数（排除已删除）
      */
     long countActiveArticles();
+
+    /**
+     * 获取用户收藏的资讯列表
+     */
+    List<ArticleDTO> getUserCollections(Long userId);
 }

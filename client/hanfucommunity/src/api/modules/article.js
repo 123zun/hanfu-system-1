@@ -50,6 +50,15 @@ export const getHotArticles = (limit = 5) => {
     })
 }
 
+// 获取用户收藏的资讯列表
+export const getMyArticleCollections = (userId) => {
+    return request({
+        url: '/article/my-collections',
+        method: 'GET',
+        params: { userId }
+    })
+}
+
 // 获取资讯详情
 export const getArticleDetail = (id) => {
     const userId = getCurrentUserId()

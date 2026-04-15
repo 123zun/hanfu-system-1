@@ -294,4 +294,18 @@ public class WorkController {
             return R.error("获取失败");
         }
     }
+
+    /**
+     * 获取用户收藏的作品列表
+     */
+    @GetMapping("/my-collections")
+    public R<?> getMyCollections(@RequestParam Long userId) {
+        try {
+            log.info("获取用户收藏作品: userId={}", userId);
+            return R.success(workService.getUserCollections(userId));
+        } catch (Exception e) {
+            log.error("获取收藏列表失败", e);
+            return R.error("获取失败");
+        }
+    }
 }

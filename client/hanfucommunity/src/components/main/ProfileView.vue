@@ -24,8 +24,8 @@
         <h2 class="profile-name">{{ userInfo.username || '汉服爱好者' }}</h2>
         <p class="profile-bio">{{ userInfo.bio || '传承华夏文明，弘扬汉服文化' }}</p>
         <div class="profile-stats">
-          <div class="stat-item">
-            <span class="stat-number">{{ userInfo.postCount || 0 }}</span>
+          <div class="stat-item" @click="openMyPostsDialog">
+            <span class="stat-number">{{ myPostCount }}</span>
             <span class="stat-label">帖子</span>
           </div>
           <div class="stat-item">
@@ -36,8 +36,8 @@
             <span class="stat-number">{{ userInfo.following || 0 }}</span>
             <span class="stat-label">关注中</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-number">{{ userInfo.collections || 0 }}</span>
+          <div class="stat-item" @click="openMyCollectionsDialog">
+            <span class="stat-number">{{ myCollectionCount }}</span>
             <span class="stat-label">收藏</span>
           </div>
         </div>
@@ -319,6 +319,37 @@
       </el-form>
     </div>
   </el-dialog>
+
+  <!-- 我的帖子弹窗 -->
+  <el-dialog v-model="myPostsDialogVisible" title="我的帖子" width="700px" :lock-scroll="false">
+    <div class="my-items-dialog">
+      <div v-if="myPostsList.length === 0" class="empty-tip">暂无发布的帖子</div>
+      <ul class="item-list" v-else>
+        <li v-for="item in myPostsList" :key="item.id" class="item-row">
+          <div class="item-info" @click="goToDetail(item)">
+            <span class="item-title">{{ item.title }}</span>
+            <span class="item-type">{{ item.type === 'article' ? '资讯' : '帖子' }}</span>
+          </div>
+          <el-button type="danger" size="small" @click="handleDeletePost(item)">删除</el-button>
+        </li>
+      </ul>
+    </div>
+  </el-dialog>
+
+  <!-- 我的收藏弹窗 -->
+  <el-dialog v-model="myCollectionsDialogVisible" title="我的收藏" width="700px" :lock-scroll="false">
+    <div class="my-items-dialog">
+      <div v-if="myCollectionsList.length === 0" class="empty-tip">暂无收藏内容</div>
+      <ul class="item-list" v-else>
+        <li v-for="item in myCollectionsList" :key="item.id" class="item-row">
+          <div class="item-info" @click="goToCollectionDetail(item)">
+            <span class="item-title">{{ item.title }}</span>
+            <span class="item-type">{{ item.type === 'article' ? '资讯' : '帖子' }}</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -338,13 +369,24 @@ import {
   Warning
 } from '@element-plus/icons-vue'
 import { getUserInfo, updateUserInfo, uploadAvatar,changePassword } from '@/api/modules/user'
+import { getMyArticleCollections } from '@/api/modules/article'
+import { getWorkList, deleteWork, getMyWorkCollections } from '@/api/modules/work'
+import { getArticleList } from '@/api/modules/article'
 
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
 // 默认头像
-const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.jpg'
+const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.png'
+
+// 帖子和收藏相关
+const myPostCount = ref(0)
+const myCollectionCount = ref(0)
+const myPostsList = ref([])
+const myCollectionsList = ref([])
+const myPostsDialogVisible = ref(false)
+const myCollectionsDialogVisible = ref(false)
 
 // 表单引用
 const profileFormRef = ref()
@@ -479,6 +521,8 @@ const passwordRules = {
 // 页面加载
 onMounted(() => {
   loadUserProfile()
+  loadMyPosts()
+  loadMyCollections()
 })
 
 // 加载用户信息
@@ -831,6 +875,111 @@ const resetPasswordForm = () => {
 const openPasswordDialog = () => {
   resetPasswordForm()  // 重置表单
   passwordDialogVisible.value = true
+}
+
+// 打开我的帖子弹窗
+const openMyPostsDialog = async () => {
+  myPostsDialogVisible.value = true
+  await loadMyPosts()
+}
+
+// 打开我的收藏弹窗
+const openMyCollectionsDialog = async () => {
+  myCollectionsDialogVisible.value = true
+  await loadMyCollections()
+}
+
+// 加载我的帖子（资讯+作品合并）
+const loadMyPosts = async () => {
+  const userId = localStorage.getItem('current_user_id')
+  if (!userId) return
+  try {
+    myPostsList.value = []
+    // 查资讯
+    const articlesRes = await getArticleList({ userId, page: 1, size: 100 })
+    if (articlesRes?.code === 200 && articlesRes.data?.records) {
+      articlesRes.data.records.forEach(item => {
+        myPostsList.value.push({ ...item, type: 'article' })
+      })
+    }
+    // 查作品
+    const worksRes = await getWorkList({ userId, page: 1, size: 100 })
+    if (worksRes?.code === 200 && worksRes.data?.records) {
+      worksRes.data.records.forEach(item => {
+        myPostsList.value.push({ ...item, type: 'work' })
+      })
+    }
+    myPostCount.value = myPostsList.value.length
+  } catch (e) {
+    console.error('加载帖子失败', e)
+  }
+}
+
+// 加载我的收藏（资讯+作品合并）
+const loadMyCollections = async () => {
+  const userId = localStorage.getItem('current_user_id')
+  if (!userId) return
+  try {
+    myCollectionsList.value = []
+    const [articleRes, workRes] = await Promise.all([
+      getMyArticleCollections(userId),
+      getMyWorkCollections(userId)
+    ])
+    if (articleRes?.code === 200 && articleRes.data) {
+      articleRes.data.forEach(item => {
+        myCollectionsList.value.push({ ...item, type: 'article' })
+      })
+    }
+    if (workRes?.code === 200 && workRes.data) {
+      workRes.data.forEach(item => {
+        myCollectionsList.value.push({ ...item, type: 'work' })
+      })
+    }
+    myCollectionCount.value = myCollectionsList.value.length
+  } catch (e) {
+    console.error('加载收藏失败', e)
+  }
+}
+
+// 删除帖子（仅删除作品，资讯不可删）
+const handleDeletePost = async (item) => {
+  try {
+    await ElMessageBox.confirm('确定删除该帖子吗？', '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    if (item.type === 'work') {
+      const res = await deleteWork(item.id, localStorage.getItem('current_user_id'))
+      if (res?.code === 200) {
+        ElMessage.success('删除成功')
+        myPostsList.value = myPostsList.value.filter(i => i.id !== item.id)
+        myPostCount.value = myPostsList.value.length
+      } else {
+        ElMessage.error(res?.message || '删除失败')
+      }
+    }
+  } catch (e) {
+    console.error('删除失败', e)
+  }
+}
+
+// 跳转到帖子详情
+const goToDetail = (item) => {
+  if (item.type === 'work') {
+    router.push(`/work/detail/${item.id}`)
+  } else {
+    router.push(`/article/detail/${item.id}`)
+  }
+}
+
+// 跳转到收藏详情
+const goToCollectionDetail = (item) => {
+  if (item.type === 'work') {
+    router.push(`/work/detail/${item.id}`)
+  } else {
+    router.push(`/article/detail/${item.id}`)
+  }
 }
 </script>
 
@@ -1423,5 +1572,68 @@ const openPasswordDialog = () => {
 
 .submit-btn:active {
   transform: translateY(0);
+}
+
+/* 帖子/收藏弹窗 */
+.my-items-dialog {
+  min-height: 200px;
+}
+
+.empty-tip {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 0.95rem;
+}
+
+.item-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0e6d6;
+  gap: 12px;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.item-info:hover .item-title {
+  color: #d4af37;
+}
+
+.item-title {
+  color: #333;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s;
+}
+
+.item-type {
+  font-size: 0.8rem;
+  color: #fff;
+  background: #d4af37;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>
