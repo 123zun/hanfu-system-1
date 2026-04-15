@@ -106,20 +106,22 @@
                 查看
               </el-button>
               <el-button
-                  type="primary"
-                  link
-                  size="small"
-                  @click="handleEdit(item.id)"
-              >
-                编辑
-              </el-button>
-              <el-button
+                  v-if="isAdminUser || String(item.userId) === String(currentUserId)"
                   type="danger"
                   link
                   size="small"
                   @click="handleDelete(item.id, item.title)"
               >
                 删除
+              </el-button>
+              <el-button
+                  v-if="isAdminUser"
+                  type="primary"
+                  link
+                  size="small"
+                  @click="handleEdit(item.id)"
+              >
+                编辑
               </el-button>
             </div>
           </div>
@@ -160,8 +162,14 @@ import {
   Plus
 } from '@element-plus/icons-vue'
 import { getWorkList, deleteWork, getWorkTypes } from '@/api/modules/work'
+import { isAdmin, getCurrentUserId } from '@/utils/permission'
 
 const router = useRouter()
+
+// 当前用户ID
+const currentUserId = getCurrentUserId()
+// 是否是管理员
+const isAdminUser = isAdmin()
 
 // 搜索关键词
 const searchKeyword = ref('')

@@ -49,6 +49,9 @@ public class UserInfo {
     @TableField("status")
     private Integer status = 1;  // 1-正常，0-已删除
 
+    @TableField("role")
+    private String role = "USER";  // ADMIN 或 USER
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

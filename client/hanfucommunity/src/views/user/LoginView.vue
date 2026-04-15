@@ -157,9 +157,11 @@ const handleLogin = async () => {
         const data = response.data || {}
         const userInfo = data.userInfo || data
 
-
         // 保存到localStorage
         localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
+        if (userInfo.role) {
+          localStorage.setItem('hanfu_role', userInfo.role)
+        }
 
         // 保存用户ID
         if (userInfo.id) {

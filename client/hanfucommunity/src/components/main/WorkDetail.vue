@@ -70,7 +70,7 @@
                   <el-button link size="small" :type="comment.liked ? 'primary' : 'default'" @click="handleCommentLike(comment.id)">
                     点赞 ({{ comment.likes || 0 }})
                   </el-button>
-                  <el-button v-if="currentUser && currentUser.id === comment.userId" link size="small" type="danger" @click="handleDeleteComment(comment.id)">
+                  <el-button v-if="currentUser && (isAdminUser || currentUser.id === comment.userId)" link size="small" type="danger" @click="handleDeleteComment(comment.id)">
                     删除
                   </el-button>
                 </div>
@@ -96,7 +96,7 @@
                       <el-button link size="small" :type="reply.liked ? 'primary' : 'default'" @click="handleReplyLike(reply.id)">
                         点赞 ({{ reply.likes || 0 }})
                       </el-button>
-                      <el-button v-if="currentUser && currentUser.id === reply.userId" link size="small" type="danger" @click="handleDeleteComment(reply.id)">
+                      <el-button v-if="currentUser && (isAdminUser || currentUser.id === reply.userId)" link size="small" type="danger" @click="handleDeleteComment(reply.id)">
                         删除
                       </el-button>
                     </div>
@@ -120,6 +120,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, ElAvatar, ElButton, ElInput, ElEmpty } from 'element-plus'
 import { getWorkDetail, likeWork, collectWork, getWorkComments, addWorkComment, likeWorkComment, deleteWorkComment } from '@/api/modules/work'
+import { isAdmin } from '@/utils/permission'
 
 const router = useRouter()
 const route = useRoute()
@@ -135,6 +136,7 @@ const replyContent = ref('')
 const replyToUserName = ref('')
 const replyToId = ref(null)
 const currentUser = ref(null)
+const isAdminUser = isAdmin()
 
 onMounted(() => {
   workId.value = route.params.id

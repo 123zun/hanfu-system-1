@@ -17,10 +17,11 @@
                 @input="handleSearch"
             />
             <div class="toolbar-actions">
-                <el-button type="primary" @click="handleAdd" :loading="loadingUsers">
+                <el-button v-if="isAdminUser" type="primary" @click="handleAdd" :loading="loadingUsers">
                     新增
                 </el-button>
                 <el-button
+                    v-if="isAdminUser || isOrganizer"
                     type="danger"
                     :disabled="selectedRows.length === 0"
                     @click="handleRemove"
@@ -84,11 +85,15 @@ import { getParticipants } from '@/api/modules/activity'
 import { getActivityDetail } from '@/api/modules/activity'
 import UserSelectDialog from './UserSelectDialog.vue'
 import request from '@/api/request'
+import { isAdmin } from '@/utils/permission'
+
+const isAdminUser = isAdmin()
 
 const props = defineProps({
     modelValue: Boolean,
     activityId: Number,
-    activityTitle: String
+    activityTitle: String,
+    isOrganizer: Boolean
 })
 
 const emit = defineEmits(['update:modelValue', 'refresh'])

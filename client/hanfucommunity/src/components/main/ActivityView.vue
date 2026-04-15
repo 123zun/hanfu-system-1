@@ -93,8 +93,20 @@
                         >
                             {{ item.registered ? '已报名' : '报名' }}
                         </el-button>
-                        <el-button type="primary" link size="small" @click="handleEdit(item)">修改</el-button>
-                        <el-button type="danger" link size="small" @click="handleDelete(item)">删除</el-button>
+                        <el-button
+                            v-if="isAdminUser || String(item.organizerId) === String(userId)"
+                            type="primary"
+                            link
+                            size="small"
+                            @click="handleEdit(item)"
+                        >修改</el-button>
+                        <el-button
+                            v-if="isAdminUser || String(item.organizerId) === String(userId)"
+                            type="danger"
+                            link
+                            size="small"
+                            @click="handleDelete(item)"
+                        >删除</el-button>
                     </div>
                 </div>
             </div>
@@ -133,6 +145,7 @@
             v-model="showParticipantDialog"
             :activity-id="currentActivityId"
             :activity-title="currentActivityTitle"
+            :is-organizer="String(currentActivityOrganizerId) === String(userId)"
             @refresh="loadActivityList"
         />
     </div>
@@ -145,9 +158,11 @@ import { Search, Plus, User, Document, Location, Calendar } from '@element-plus/
 import { getActivityList, deleteActivity, registerActivity } from '@/api/modules/activity'
 import ActivityFormDialog from './ActivityFormDialog.vue'
 import ParticipantDialog from './ParticipantDialog.vue'
+import { isAdmin } from '@/utils/permission'
 
 const userInfo = JSON.parse(localStorage.getItem('hanfu_user') || '{}')
 const userId = userInfo.id
+const isAdminUser = isAdmin()
 
 // 数据
 const activityList = ref([])
@@ -168,6 +183,7 @@ const currentActivity = ref(null)
 const dialogMode = ref('create')
 const currentActivityId = ref(null)
 const currentActivityTitle = ref('')
+const currentActivityOrganizerId = ref(null)
 
 const getImageUrl = (path) => {
     if (!path) return 'http://localhost:8080/default/zixundefault.png'
@@ -347,6 +363,7 @@ const handleRegister = async (item) => {
 const openParticipantDialog = (item) => {
     currentActivityId.value = item.id
     currentActivityTitle.value = item.title
+    currentActivityOrganizerId.value = item.organizerId
     showParticipantDialog.value = true
 }
 

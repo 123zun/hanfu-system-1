@@ -136,6 +136,7 @@
               @click="handleDownload(item.id)"
           >下载</el-button>
           <el-button
+              v-if="isAdminUser || String(item.uploaderId) === String(currentUserId)"
               type="info"
               link
               size="small"
@@ -143,6 +144,7 @@
               @click="handleEdit(item)"
           >编辑</el-button>
           <el-button
+              v-if="isAdminUser || String(item.uploaderId) === String(currentUserId)"
               type="danger"
               link
               size="small"
@@ -373,6 +375,11 @@ import {
   uploadResource,
   updateResource
 } from '@/api/modules/resource'
+import { isAdmin, getCurrentUserId } from '@/utils/permission'
+
+// 权限
+const isAdminUser = isAdmin()
+const currentUserId = getCurrentUserId()
 
 // 搜索和筛选
 const searchKeyword = ref('')

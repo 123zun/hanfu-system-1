@@ -41,6 +41,7 @@
 
       <el-button type="primary" icon="Refresh" @click="refreshNews">刷新</el-button>
       <el-button
+          v-if="isAdminUser"
           type="success"
           icon="Plus"
           @click="handleAddArticle"
@@ -91,12 +92,14 @@
                   @click.stop="viewNewsDetail(item.id)"
                   icon="View">查看</el-button>
               <el-button
+                  v-if="isAdminUser"
                   type="primary"
                   link
                   size="small"
                   @click="handleEdit(item.id)"
                   icon="Edit">编辑</el-button>
               <el-button
+                  v-if="isAdminUser"
                   type="danger"
                   link
                   size="small"
@@ -136,12 +139,14 @@
                   @click.stop="viewNewsDetail(item.id)"
                   icon="View">查看</el-button>
               <el-button
+                  v-if="isAdminUser"
                   type="primary"
                   link
                   size="small"
                   @click="handleEdit(item.id)"
                   icon="Edit">编辑</el-button>
               <el-button
+                  v-if="isAdminUser"
                   type="danger"
                   link
                   size="small"
@@ -183,6 +188,7 @@ import {
   Delete
 } from '@element-plus/icons-vue'
 import { getArticleList, getHotArticles ,getArticleCategories ,deleteArticle ,increaseArticleView} from '@/api/modules/article'
+import { isAdmin } from '@/utils/permission'
 
 const router = useRouter()
 
@@ -224,6 +230,9 @@ const handleAddArticle = () => {
 const handleEdit = (id) => {
   router.push(`/article/edit/${id}`)
 }
+
+// 是否是管理员
+const isAdminUser = isAdmin()
 
 // 删除资讯
 const handleDelete = async (id, title) => {

@@ -35,7 +35,7 @@
               <el-icon><Collection /></el-icon>
               资源
             </el-menu-item>
-            <el-menu-item index="users">
+            <el-menu-item v-if="isAdminUser" index="users">
               <el-icon><UserFilled /></el-icon>
               用户管理
             </el-menu-item>
@@ -260,14 +260,18 @@ import UsersView from '@/components/main/UsersView.vue'
 import { getHotArticles } from '@/api/modules/article'
 import { getHotWorks, getWorkList } from '@/api/modules/work'
 import { getDashboardStats } from '@/api/modules/dashboard'
+import { isAdmin } from '@/utils/permission'
 
 const router = useRouter()
 
 // 默认头像
-const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.jpg'
+const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.png'
 
 // 用户信息
 const userInfo = ref({})
+
+// 是否是管理员
+const isAdminUser = isAdmin()
 
 // 今日热点（合并热门资讯和热门帖子）
 const hotList = ref([])

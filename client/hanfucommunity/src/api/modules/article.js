@@ -16,8 +16,6 @@ const getCurrentUserId = () => {
 
 // 获取资讯列表
 export const getArticleList = (params) => {
-    const userId = getCurrentUserId()
-
     return request({
         url: '/article/list',
         method: 'GET',
@@ -31,7 +29,7 @@ export const getArticleList = (params) => {
             isHot: params?.isHot,
             sortField: params?.sortField || 'publish_time',
             sortOrder: params?.sortOrder || 'desc',
-            userId: params?.userId !== undefined ? params.userId : userId
+            userId: params?.userId
         }
     })
 }

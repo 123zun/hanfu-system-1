@@ -135,7 +135,7 @@
                     点赞 ({{ comment.likes || 0 }})
                   </el-button>
                   <el-button
-                      v-if="currentUser && currentUser.id === comment.userId"
+                      v-if="currentUser && (isAdminUser || currentUser.id === comment.userId)"
                       link
                       size="small"
                       type="danger"
@@ -191,7 +191,7 @@
                         点赞 ({{ reply.likes || 0 }})
                       </el-button>
                       <el-button
-                          v-if="currentUser && currentUser.id === reply.userId"
+                          v-if="currentUser && (isAdminUser || currentUser.id === reply.userId)"
                           link
                           size="small"
                           type="danger"
@@ -239,6 +239,7 @@ import {
   Document
 } from '@element-plus/icons-vue'
 import { getArticleDetail, likeArticle, collectArticle, getComments, addComment, likeComment as apiLikeComment, deleteComment } from '@/api/modules/article'
+import { isAdmin } from '@/utils/permission'
 
 const router = useRouter()
 const route = useRoute()
@@ -280,6 +281,7 @@ const commentPageSize = 10
 
 // 当前用户
 const currentUser = ref(null)
+const isAdminUser = isAdmin()
 
 // 分类映射
 const categoryMap = {
