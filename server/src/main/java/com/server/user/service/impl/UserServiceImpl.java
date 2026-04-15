@@ -37,7 +37,7 @@ public class UserServiceImpl implements UserService {
 
             // 2. 设置默认头像
             if (userInfo.getAvatar() == null || userInfo.getAvatar().isEmpty()) {
-                userInfo.setAvatar("http://localhost:8080/uploads/avatars/default.jpg");
+                userInfo.setAvatar("http://localhost:8080/uploads/avatars/default.png");
             }
 
             // 3. 尝试插入（让数据库唯一约束来保证唯一性）

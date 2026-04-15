@@ -44,7 +44,7 @@ public class UserInfo {
     private String age;
 
     @TableField("avatar")
-    private String avatar = "http://localhost:8080/uploads/avatars/default.jpg";
+    private String avatar = "http://localhost:8080/uploads/avatars/default.png";
 
     @TableField("status")
     private Integer status = 1;  // 1-正常，0-已删除

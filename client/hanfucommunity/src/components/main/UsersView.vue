@@ -390,7 +390,6 @@ const handleSave = async () => {
         gender: editForm.gender,
         region: editForm.region,
         bio: editForm.bio,
-        avatar: 'http://localhost:8080/uploads/avatars/default.jpg'
       })
       if (response && response.code === 200) {
         ElMessage.success('添加成功')
