@@ -310,4 +310,11 @@ public class UserServiceImpl implements UserService {
         }
         return R.error("批量删除失败");
     }
+
+    @Override
+    public long countActiveUsers() {
+        LambdaQueryWrapper<UserInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserInfo::getStatus, 1);
+        return userMapper.selectCount(wrapper);
+    }
 }

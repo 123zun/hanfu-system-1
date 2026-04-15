@@ -354,4 +354,21 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
             return null;
         }
     }
+
+    @Override
+    public List<WorkDTO> getHotWorks(int limit) {
+        LambdaQueryWrapper<Work> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Work::getStatus, 1)
+               .orderByDesc(Work::getViews)
+               .last("LIMIT " + limit);
+        List<Work> works = workMapper.selectList(wrapper);
+        return works.stream().map(w -> convertToDTO(w, null)).toList();
+    }
+
+    @Override
+    public long countActiveWorks() {
+        LambdaQueryWrapper<Work> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Work::getStatus, 1);
+        return workMapper.selectCount(wrapper);
+    }
 }

@@ -24,7 +24,8 @@ export const getWorkList = (params) => {
             size: params?.size || 12,
             type: params?.type || undefined,
             keyword: params?.keyword || undefined,
-            sort: params?.sort || 'latest'
+            sort: params?.sort || 'latest',
+            userId: params?.userId || undefined
         }
     })
 }
@@ -178,5 +179,14 @@ export const updateWorkPost = (data) => {
         url: '/work/update',
         method: 'PUT',
         data: data
+    })
+}
+
+// 获取热门帖子
+export const getHotWorks = (limit = 5) => {
+    return request({
+        url: '/work/hot',
+        method: 'GET',
+        params: { limit }
     })
 }

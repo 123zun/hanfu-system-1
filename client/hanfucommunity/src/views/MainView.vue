@@ -105,11 +105,15 @@
           <div class="sidebar-section">
             <h3>今日热点</h3>
             <ul class="hot-list">
-              <li @click="goToNews">汉服文化复兴研讨会</li>
-              <li @click="goToNews">传统节日活动预告</li>
-              <li @click="goToNews">汉服穿搭技巧分享</li>
-              <li @click="goToNews">传统文化讲座直播</li>
-              <li @click="goToNews">汉服摄影大赛报名</li>
+              <li
+                  v-for="item in hotList"
+                  :key="item.id + item.type"
+                  @click="goToHotItem(item)"
+              >
+                {{ item.title }}
+                <span class="hot-views">{{ item.views || 0 }}浏览</span>
+              </li>
+              <li v-if="hotList.length === 0" class="empty-tip">暂无热点内容</li>
             </ul>
           </div>
 
@@ -117,15 +121,15 @@
             <h3>社区数据</h3>
             <div class="community-stats">
               <div class="stat-item">
-                <span class="stat-number">1,234</span>
-                <span class="stat-label">今日访问</span>
+                <span class="stat-number">{{ communityStats.activityCount }}</span>
+                <span class="stat-label">开展活动</span>
               </div>
               <div class="stat-item">
-                <span class="stat-number">5,678</span>
+                <span class="stat-number">{{ communityStats.userCount }}</span>
                 <span class="stat-label">注册用户</span>
               </div>
               <div class="stat-item">
-                <span class="stat-number">12,345</span>
+                <span class="stat-number">{{ communityStats.articleCount + communityStats.workCount }}</span>
                 <span class="stat-label">总帖子数</span>
               </div>
             </div>
@@ -252,6 +256,11 @@ import ActivitiesView from '@/components/main/ActivityView.vue'
 import ResourcesView from '@/components/main/ResourcesView.vue'
 import UsersView from '@/components/main/UsersView.vue'
 
+// API
+import { getHotArticles } from '@/api/modules/article'
+import { getHotWorks, getWorkList } from '@/api/modules/work'
+import { getDashboardStats } from '@/api/modules/dashboard'
+
 const router = useRouter()
 
 // 默认头像
@@ -259,6 +268,17 @@ const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.jpg'
 
 // 用户信息
 const userInfo = ref({})
+
+// 今日热点（合并热门资讯和热门帖子）
+const hotList = ref([])
+
+// 社区统计数据
+const communityStats = ref({
+  activityCount: 0,
+  userCount: 0,
+  articleCount: 0,
+  workCount: 0
+})
 
 // 当前激活的菜单
 const activeMenu = ref('news')
@@ -284,17 +304,100 @@ const currentComponent = computed(() => {
 // 页面加载
 onMounted(() => {
   loadUserInfo()
+  loadHotList()
+  loadCommunityStats()
 })
 
 // 加载用户信息
-const loadUserInfo = () => {
+const loadUserInfo = async () => {
   try {
     const userStr = localStorage.getItem('hanfu_user')
     if (userStr) {
-      userInfo.value = JSON.parse(userStr)
+      const user = JSON.parse(userStr)
+      userInfo.value = user
+      // 加载当前用户帖子数
+      await loadUserPostCount(user.id)
     }
   } catch (error) {
     console.error('加载用户信息失败:', error)
+  }
+}
+
+// 加载当前用户帖子数
+const loadUserPostCount = async (userId) => {
+  try {
+    const res = await getWorkList({ userId, page: 1, size: 1, sort: 'latest' })
+    if (res && res.code === 200 && res.data) {
+      userInfo.value.postCount = res.data.total || 0
+    }
+  } catch (error) {
+    console.error('加载帖子数失败:', error)
+  }
+}
+
+// 加载今日热点（热门资讯 + 热门帖子，按浏览量排序取前5）
+const loadHotList = async () => {
+  try {
+    const [articlesRes, worksRes] = await Promise.all([
+      getHotArticles(5),
+      getHotWorks(5)
+    ])
+
+    const items = []
+
+    if (articlesRes && articlesRes.code === 200 && articlesRes.data) {
+      articlesRes.data.forEach(a => {
+        items.push({
+          id: a.id,
+          title: a.title,
+          views: a.views,
+          type: 'article'
+        })
+      })
+    }
+
+    if (worksRes && worksRes.code === 200 && worksRes.data) {
+      worksRes.data.forEach(w => {
+        items.push({
+          id: w.id,
+          title: w.title,
+          views: w.views,
+          type: 'work'
+        })
+      })
+    }
+
+    // 按浏览量排序，取前5
+    items.sort((a, b) => (b.views || 0) - (a.views || 0))
+    hotList.value = items.slice(0, 5)
+  } catch (error) {
+    console.error('加载热点失败:', error)
+  }
+}
+
+// 加载社区统计数据
+const loadCommunityStats = async () => {
+  try {
+    const res = await getDashboardStats()
+    if (res && res.code === 200 && res.data) {
+      communityStats.value = {
+        activityCount: res.data.activityCount || 0,
+        userCount: res.data.userCount || 0,
+        articleCount: res.data.articleCount || 0,
+        workCount: res.data.workCount || 0
+      }
+    }
+  } catch (error) {
+    console.error('加载社区数据失败:', error)
+  }
+}
+
+// 跳转热点内容
+const goToHotItem = (item) => {
+  if (item.type === 'article') {
+    router.push(`/article/detail/${item.id}`)
+  } else {
+    router.push(`/work/detail/${item.id}`)
   }
 }
 
@@ -315,13 +418,11 @@ const goToNews = () => {
 
 // 发布帖子
 const handleCreatePost = () => {
-  ElMessage.info('发布帖子功能开发中...')
   activeMenu.value = 'posts'
 }
 
 // 参加活动
 const handleJoinActivity = () => {
-  ElMessage.info('参加活动功能开发中...')
   activeMenu.value = 'activities'
 }
 
@@ -671,6 +772,23 @@ const handleLogout = () => {
 .hot-list li:hover {
   color: #d4af37;
   padding-left: 8px;
+}
+
+.hot-views {
+  font-size: 0.75rem;
+  color: #999;
+  margin-left: 6px;
+}
+
+.empty-tip {
+  color: #999;
+  font-size: 0.85rem;
+  cursor: default;
+}
+
+.empty-tip:hover {
+  color: #999;
+  padding-left: 0;
 }
 
 .community-stats {

@@ -56,4 +56,9 @@ public interface UserService {
      * 删除用户
      */
     R<?> deleteUser(Long id);
+
+    /**
+     * 统计活跃用户数（排除已删除）
+     */
+    long countActiveUsers();
 }

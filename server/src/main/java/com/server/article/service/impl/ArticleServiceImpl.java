@@ -37,6 +37,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
     @Autowired
     private CollectionMapper collectionMapper;
 
+    @Autowired
+    private ArticleMapper articleMapper;
+
     /**
      * 分页查询资讯列表
      */
@@ -441,5 +444,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (userId == null) return false;
         int count = collectionMapper.checkCollected(userId, "article", articleId);
         return count > 0;
+    }
+
+    @Override
+    public long countActiveArticles() {
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Article::getStatus, 1);
+        return articleMapper.selectCount(wrapper);
     }
 }

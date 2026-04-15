@@ -61,4 +61,14 @@ public interface WorkService {
      * 检查用户是否收藏了作品
      */
     boolean isCollected(Long workId, Long userId);
+
+    /**
+     * 获取热门帖子（按浏览量排序）
+     */
+    List<WorkDTO> getHotWorks(int limit);
+
+    /**
+     * 统计活跃帖子数（排除已删除）
+     */
+    long countActiveWorks();
 }

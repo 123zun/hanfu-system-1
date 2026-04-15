@@ -62,4 +62,9 @@ public interface ActivityService {
      * 获取所有可用用户
      */
     List<ActivitySignup> getAllAvailableUsers();
+
+    /**
+     * 统计活跃活动数（排除已删除）
+     */
+    long countActiveActivities();
 }

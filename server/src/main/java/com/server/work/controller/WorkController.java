@@ -280,4 +280,18 @@ public class WorkController {
             return R.error("操作失败");
         }
     }
+
+    /**
+     * 获取热门帖子
+     */
+    @GetMapping("/hot")
+    public R<?> getHotWorks(@RequestParam(defaultValue = "5") Integer limit) {
+        try {
+            log.info("获取热门帖子, limit={}", limit);
+            return R.success(workService.getHotWorks(limit));
+        } catch (Exception e) {
+            log.error("获取热门帖子失败", e);
+            return R.error("获取失败");
+        }
+    }
 }

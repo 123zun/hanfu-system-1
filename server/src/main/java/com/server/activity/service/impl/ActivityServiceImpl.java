@@ -336,4 +336,11 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
 
         return dto;
     }
+
+    @Override
+    public long countActiveActivities() {
+        LambdaQueryWrapper<com.server.activity.entity.Activity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(com.server.activity.entity.Activity::getIsDeleted, 0);
+        return activityMapper.selectCount(wrapper);
+    }
 }

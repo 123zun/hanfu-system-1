@@ -69,4 +69,9 @@ public interface ArticleService {
      * 检查用户是否收藏了文章
      */
     boolean isCollected(Long articleId, Long userId);
+
+    /**
+     * 统计活跃资讯数（排除已删除）
+     */
+    long countActiveArticles();
 }
