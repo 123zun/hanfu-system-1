@@ -18,6 +18,8 @@ public class ActivityDTO {
     private LocalDate startTime;
     private LocalDate endTime;
     private Long organizerId;
+    private Integer auditStatus = 0;        // 审核状态: 0-待审核, 1-已通过, 2-已拒绝
+    private String auditReason;             // 审核不通过原因
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

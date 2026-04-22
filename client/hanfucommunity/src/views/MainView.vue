@@ -39,6 +39,10 @@
               <el-icon><UserFilled /></el-icon>
               用户管理
             </el-menu-item>
+            <el-menu-item v-if="isAdminUser" index="audit">
+              <el-icon><DocumentChecked /></el-icon>
+              内容审核
+            </el-menu-item>
             <el-menu-item index="profile">
               <el-icon><User /></el-icon>
               个人中心
@@ -245,7 +249,8 @@ import {
   Phone,
   Location,
   Plus,
-  Setting
+  Setting,
+  DocumentChecked
 } from '@element-plus/icons-vue'
 
 // 导入各个板块组件
@@ -255,6 +260,7 @@ import PostsView from '@/components/main/PostsView.vue'
 import ActivitiesView from '@/components/main/ActivityView.vue'
 import ResourcesView from '@/components/main/ResourcesView.vue'
 import UsersView from '@/components/main/UsersView.vue'
+import AuditView from '@/components/main/AuditView.vue'
 
 // API
 import { getHotArticles } from '@/api/modules/article'
@@ -297,7 +303,8 @@ const componentMap = {
   activities: markRaw(ActivitiesView),
   resources: markRaw(ResourcesView),
   users: markRaw(UsersView),
-  profile: markRaw(ProfileView)
+  profile: markRaw(ProfileView),
+  audit: markRaw(AuditView)
 }
 
 // 当前显示的组件

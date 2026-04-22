@@ -55,8 +55,10 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
 
         LambdaQueryWrapper<Work> queryWrapper = new LambdaQueryWrapper<>();
 
-        // 状态筛选
-        queryWrapper.eq(Work::getStatus, query.getStatus() != null ? query.getStatus() : 1);
+        // 状态筛选（只查询已发布的）
+        queryWrapper.eq(Work::getStatus, 1);
+        // 排除审核不通过的作品
+        queryWrapper.ne(Work::getAuditStatus, 2);
 
         // 类型筛选
         if (StringUtils.hasText(query.getType())) {
@@ -107,8 +109,8 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
     }
 
     @Override
-    public WorkDTO getWorkDetail(Long id, Long currentUserId) {
-        log.info("获取作品详情: id={}", id);
+    public WorkDTO getWorkDetail(Long id, Long currentUserId, Boolean silent) {
+        log.info("获取作品详情: id={}, silent={}", id, silent);
 
         Work work = workMapper.selectById(id);
         if (work == null) {
@@ -117,8 +119,10 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
 
         WorkDTO dto = convertToDTO(work, currentUserId);
 
-        // 增加浏览量
-        workMapper.increaseViews(id);
+        // silent=true时不增加浏览量（用于审核模块查看详情）
+        if (silent == null || !silent) {
+            workMapper.increaseViews(id);
+        }
 
         return dto;
     }
@@ -359,6 +363,7 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
     public List<WorkDTO> getHotWorks(int limit) {
         LambdaQueryWrapper<Work> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Work::getStatus, 1)
+               .ne(Work::getAuditStatus, 2)
                .orderByDesc(Work::getViews)
                .last("LIMIT " + limit);
         List<Work> works = workMapper.selectList(wrapper);
@@ -368,7 +373,8 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
     @Override
     public long countActiveWorks() {
         LambdaQueryWrapper<Work> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Work::getStatus, 1);
+        wrapper.eq(Work::getStatus, 1)
+               .ne(Work::getAuditStatus, 2);
         return workMapper.selectCount(wrapper);
     }
 
@@ -383,10 +389,67 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         List<WorkDTO> result = new java.util.ArrayList<>();
         for (com.server.entity.Collection c : collections) {
             Work work = workMapper.selectById(c.getTargetId());
-            if (work != null && work.getStatus() == 1) {
+            if (work != null && work.getStatus() == 1 && work.getAuditStatus() != 2) {
                 result.add(convertToDTO(work, userId));
             }
         }
         return result;
+    }
+
+    @Override
+    @Transactional
+    public boolean auditWork(Long workId, Long auditorId, boolean approved, String reason) {
+        log.info("审核作品: workId={}, auditorId={}, approved={}, reason={}", workId, auditorId, approved, reason);
+
+        Work work = workMapper.selectById(workId);
+        if (work == null) {
+            log.error("作品不存在: workId={}", workId);
+            return false;
+        }
+
+        if (approved) {
+            // 通过：设置审核状态为已通过，恢复显示
+            work.setAuditStatus(1);
+            work.setStatus(1);
+        } else {
+            // 不通过：设置审核状态为已拒绝，逻辑删除
+            work.setAuditStatus(2);
+            work.setStatus(0);
+        }
+        work.setAuditReason(reason);
+        work.setAuditorId(auditorId);
+        work.setAuditTime(java.time.LocalDateTime.now());
+
+        int updated = workMapper.updateById(work);
+        return updated > 0;
+    }
+
+    @Override
+    public WorkPageDTO getPendingAuditList(WorkQuery query) {
+        log.info("查询待审核作品列表: {}", query);
+
+        LambdaQueryWrapper<Work> queryWrapper = new LambdaQueryWrapper<>();
+
+        // 查询所有作品，不限制审核状态
+        queryWrapper.orderByAsc(Work::getAuditStatus)
+                    .orderByDesc(Work::getCreateTime);
+
+        // 先查总数
+        long total = workMapper.selectCount(queryWrapper);
+
+        // 再查全量后手动分页
+        List<Work> allWorks = workMapper.selectList(queryWrapper);
+        int pageSize = query.getSize() != null ? query.getSize() : 12;
+        int start = (query.getPage() - 1) * pageSize;
+        int end = Math.min(start + pageSize, allWorks.size());
+        List<Work> pagedWorks = start < allWorks.size() ? allWorks.subList(start, end) : List.of();
+
+        // 转换为DTO
+        List<WorkDTO> records = pagedWorks.stream()
+                .map(work -> convertToDTO(work, null))
+                .collect(Collectors.toList());
+
+        long pages = (total + pageSize - 1) / pageSize;
+        return new WorkPageDTO(records, total, query.getPage(), pageSize, pages);
     }
 }

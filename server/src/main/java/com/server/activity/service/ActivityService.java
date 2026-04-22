@@ -15,8 +15,9 @@ public interface ActivityService {
 
     /**
      * 获取活动详情
+     * @param silent 如果为true，不增加浏览量
      */
-    ActivityDTO getActivityDetail(Long id, Long currentUserId);
+    ActivityDTO getActivityDetail(Long id, Long currentUserId, Boolean silent);
 
     /**
      * 创建活动
@@ -67,4 +68,19 @@ public interface ActivityService {
      * 统计活跃活动数（排除已删除）
      */
     long countActiveActivities();
+
+    /**
+     * 审核活动
+     * @param activityId 活动ID
+     * @param auditorId 审核人ID
+     * @param approved 是否通过
+     * @param reason 不通过原因
+     * @return 是否成功
+     */
+    boolean auditActivity(Long activityId, Long auditorId, boolean approved, String reason);
+
+    /**
+     * 获取待审核活动列表（管理员用）
+     */
+    ActivityPageDTO getPendingAuditList(ActivityQuery query);
 }

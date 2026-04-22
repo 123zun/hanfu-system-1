@@ -14,8 +14,9 @@ public interface WorkService {
 
     /**
      * 获取作品详情
+     * @param silent 如果为true，不增加浏览量
      */
-    WorkDTO getWorkDetail(Long id, Long currentUserId);
+    WorkDTO getWorkDetail(Long id, Long currentUserId, Boolean silent);
 
     /**
      * 创建作品
@@ -76,4 +77,19 @@ public interface WorkService {
      * 获取用户收藏的作品列表
      */
     List<WorkDTO> getUserCollections(Long userId);
+
+    /**
+     * 审核作品
+     * @param workId 作品ID
+     * @param auditorId 审核人ID
+     * @param approved 是否通过
+     * @param reason 不通过原因
+     * @return 是否成功
+     */
+    boolean auditWork(Long workId, Long auditorId, boolean approved, String reason);
+
+    /**
+     * 获取待审核作品列表（管理员用）
+     */
+    WorkPageDTO getPendingAuditList(WorkQuery query);
 }

@@ -1,6 +1,7 @@
 package com.server.work.controller;
 
 import com.server.common.R;
+import com.server.common.dto.AuditRequest;
 import com.server.work.dto.WorkDTO;
 import com.server.work.dto.WorkPageDTO;
 import com.server.work.dto.WorkQuery;
@@ -157,10 +158,11 @@ public class WorkController {
     @GetMapping("/detail/{id}")
     public R<?> getWorkDetail(
             @PathVariable Long id,
-            @RequestParam(required = false) Long userId) {
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false, defaultValue = "false") Boolean silent) {
 
         try {
-            WorkDTO work = workService.getWorkDetail(id, userId);
+            WorkDTO work = workService.getWorkDetail(id, userId, silent);
             if (work == null) {
                 return R.error("作品不存在");
             }
@@ -291,6 +293,44 @@ public class WorkController {
             return R.success(workService.getHotWorks(limit));
         } catch (Exception e) {
             log.error("获取热门帖子失败", e);
+            return R.error("获取失败");
+        }
+    }
+
+    /**
+     * 审核作品
+     */
+    @PostMapping("/audit/{id}")
+    public R<?> auditWork(
+            @PathVariable Long id,
+            @RequestBody AuditRequest request) {
+        try {
+            log.info("审核作品: id={}, approved={}, reason={}", id, request.getApproved(), request.getReason());
+            boolean result = workService.auditWork(id, request.getAuditorId(), request.getApproved(), request.getReason());
+            if (result) {
+                return R.success("审核成功");
+            }
+            return R.error("审核失败");
+        } catch (Exception e) {
+            log.error("审核作品失败", e);
+            return R.error("审核失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取待审核作品列表（管理员）
+     */
+    @GetMapping("/pending-audit")
+    public R<?> getPendingAuditList(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "12") Integer size) {
+        try {
+            com.server.work.dto.WorkQuery query = new com.server.work.dto.WorkQuery();
+            query.setPage(page);
+            query.setSize(size);
+            return R.success(workService.getPendingAuditList(query));
+        } catch (Exception e) {
+            log.error("获取待审核列表失败", e);
             return R.error("获取失败");
         }
     }

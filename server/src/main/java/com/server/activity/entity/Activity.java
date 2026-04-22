@@ -43,6 +43,10 @@ public class Activity {
     private Integer currentParticipants;         // 当前参与人数
 
     private Integer status;                      // 状态: 0-未开始, 1-进行中, 2-已结束
+    private Integer auditStatus = 0;             // 审核状态: 0-待审核, 1-已通过, 2-已拒绝
+    private String auditReason;                  // 审核不通过原因
+    private Long auditorId;                      // 审核人ID
+    private LocalDateTime auditTime;             // 审核时间
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

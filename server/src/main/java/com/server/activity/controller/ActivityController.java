@@ -7,6 +7,7 @@ import com.server.activity.dto.AddParticipantsRequest;
 import com.server.activity.entity.ActivitySignup;
 import com.server.activity.service.ActivityService;
 import com.server.common.R;
+import com.server.common.dto.AuditRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -125,10 +126,11 @@ public class ActivityController {
     @GetMapping("/detail/{id}")
     public R<?> getActivityDetail(
             @PathVariable Long id,
-            @RequestParam(required = false) Long userId) {
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false, defaultValue = "false") Boolean silent) {
 
         try {
-            ActivityDTO activity = activityService.getActivityDetail(id, userId);
+            ActivityDTO activity = activityService.getActivityDetail(id, userId, silent);
             if (activity == null) {
                 return R.error("活动不存在");
             }
@@ -268,6 +270,46 @@ public class ActivityController {
             return R.success("获取成功", users);
         } catch (Exception e) {
             log.error("获取用户列表失败", e);
+            return R.error("获取失败");
+        }
+    }
+
+    // ==================== 审核管理 ====================
+
+    /**
+     * 审核活动
+     */
+    @PostMapping("/audit/{id}")
+    public R<?> auditActivity(
+            @PathVariable Long id,
+            @RequestBody AuditRequest request) {
+        try {
+            log.info("审核活动: id={}, approved={}, reason={}", id, request.getApproved(), request.getReason());
+            boolean result = activityService.auditActivity(id, request.getAuditorId(), request.getApproved(), request.getReason());
+            if (result) {
+                return R.success("审核成功");
+            }
+            return R.error("审核失败");
+        } catch (Exception e) {
+            log.error("审核活动失败", e);
+            return R.error("审核失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取待审核活动列表（管理员）
+     */
+    @GetMapping("/pending-audit")
+    public R<?> getPendingAuditList(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "9") Integer size) {
+        try {
+            ActivityQuery query = new ActivityQuery();
+            query.setPage(page);
+            query.setSize(size);
+            return R.success(activityService.getPendingAuditList(query));
+        } catch (Exception e) {
+            log.error("获取待审核列表失败", e);
             return R.error("获取失败");
         }
     }

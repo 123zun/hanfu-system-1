@@ -39,6 +39,9 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
 
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
 
+        // 只查询已审核通过的活动
+        wrapper.eq(Activity::getAuditStatus, 1);
+
         // 关键词搜索
         if (StringUtils.hasText(query.getKeyword())) {
             wrapper.like(Activity::getTitle, query.getKeyword().trim());
@@ -91,11 +94,12 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
     }
 
     @Override
-    public ActivityDTO getActivityDetail(Long id, Long currentUserId) {
+    public ActivityDTO getActivityDetail(Long id, Long currentUserId, Boolean silent) {
         Activity activity = activityMapper.selectById(id);
         if (activity == null) {
             return null;
         }
+        // silent=true时不做额外处理（活动暂无浏览量字段，保持接口一致）
         return convertToDTO(activity, currentUserId);
     }
 
@@ -340,7 +344,63 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
     @Override
     public long countActiveActivities() {
         LambdaQueryWrapper<com.server.activity.entity.Activity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(com.server.activity.entity.Activity::getIsDeleted, 0);
+        wrapper.eq(com.server.activity.entity.Activity::getIsDeleted, 0)
+               .eq(com.server.activity.entity.Activity::getAuditStatus, 1);
         return activityMapper.selectCount(wrapper);
+    }
+
+    @Override
+    @Transactional
+    public boolean auditActivity(Long activityId, Long auditorId, boolean approved, String reason) {
+        log.info("审核活动: activityId={}, auditorId={}, approved={}, reason={}", activityId, auditorId, approved, reason);
+
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null) {
+            log.error("活动不存在: activityId={}", activityId);
+            return false;
+        }
+
+        if (approved) {
+            // 通过：设置审核状态为已通过
+            activity.setAuditStatus(1);
+        } else {
+            // 不通过：设置审核状态为已拒绝
+            activity.setAuditStatus(2);
+        }
+        activity.setAuditReason(reason);
+        activity.setAuditorId(auditorId);
+        activity.setAuditTime(java.time.LocalDateTime.now());
+
+        int updated = activityMapper.updateById(activity);
+        return updated > 0;
+    }
+
+    @Override
+    public ActivityPageDTO getPendingAuditList(ActivityQuery query) {
+        log.info("查询待审核活动列表: {}", query);
+
+        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
+
+        // 查询所有活动，不限制审核状态
+        wrapper.orderByAsc(Activity::getAuditStatus)
+               .orderByDesc(Activity::getCreateTime);
+
+        // 先查总数
+        long total = activityMapper.selectCount(wrapper);
+
+        // 再查全量后手动分页
+        List<Activity> allActivities = activityMapper.selectList(wrapper);
+        int pageSize = query.getSize() != null ? query.getSize() : 9;
+        int start = (query.getPage() - 1) * pageSize;
+        int end = Math.min(start + pageSize, allActivities.size());
+        List<Activity> pagedActivities = start < allActivities.size() ? allActivities.subList(start, end) : List.of();
+
+        // 转换为DTO
+        List<ActivityDTO> records = pagedActivities.stream()
+                .map(activity -> convertToDTO(activity, null))
+                .collect(Collectors.toList());
+
+        long pages = (total + pageSize - 1) / pageSize;
+        return new ActivityPageDTO(records, total, query.getPage(), pageSize, pages);
     }
 }
