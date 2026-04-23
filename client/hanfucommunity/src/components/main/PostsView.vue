@@ -57,6 +57,16 @@
         />
       </el-select>
 
+      <!-- 个性化推荐开关 -->
+      <el-tooltip content="开启后基于你的兴趣智能推荐" placement="top">
+        <el-switch
+            v-model="enableRecommend"
+            active-text="智能推荐"
+            inactive-text="普通"
+            @change="handleRecommendToggle"
+        />
+      </el-tooltip>
+
       <el-button type="primary" icon="Refresh" @click="refreshPosts">刷新</el-button>
       <el-button
           type="success"
@@ -162,6 +172,7 @@ import {
   Plus
 } from '@element-plus/icons-vue'
 import { getWorkList, deleteWork, getWorkTypes } from '@/api/modules/work'
+import { getRecommendations } from '@/api/modules/recommend'
 import { isAdmin, getCurrentUserId } from '@/utils/permission'
 
 const router = useRouter()
@@ -181,6 +192,9 @@ const sortType = ref('latest')
 const loading = ref(false)
 // 类型列表
 const types = ref([])
+
+// 个性化推荐开关
+const enableRecommend = ref(false)
 
 // 帖子列表
 const postsList = reactive([])
@@ -212,6 +226,34 @@ const loadTypes = async () => {
 const loadPosts = async () => {
   try {
     loading.value = true
+
+    // 如果开启了个性化推荐
+    if (enableRecommend.value && currentUserId) {
+      const recResponse = await getRecommendations(currentUserId, pageSize.value)
+      if (recResponse && recResponse.code === 200 && recResponse.data) {
+        postsList.length = 0
+        recResponse.data.forEach(item => {
+          postsList.push({
+            id: item.workId,
+            title: item.title,
+            description: item.description,
+            coverImage: item.coverImage,
+            type: item.type,
+            userId: item.userId,
+            userAvatar: item.avatar,
+            userName: item.nickname,
+            views: item.views,
+            likes: item.likes,
+            comments: item.comments
+          })
+        })
+        total.value = recResponse.data.length || 0
+        loading.value = false
+        return
+      }
+    }
+
+    // 普通模式
     const params = {
       page: currentPage.value,
       size: pageSize.value,
@@ -313,6 +355,12 @@ const refreshPosts = () => {
 
 // 排序改变
 const handleSortChange = () => {
+  currentPage.value = 1
+  loadPosts()
+}
+
+// 智能推荐开关切换
+const handleRecommendToggle = (val) => {
   currentPage.value = 1
   loadPosts()
 }

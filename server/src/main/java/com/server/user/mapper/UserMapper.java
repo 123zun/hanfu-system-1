@@ -48,4 +48,8 @@ public interface UserMapper extends BaseMapper<UserInfo> {
             "</foreach>" +
             "</script>")
     int deleteBatch(@Param("ids") List<Long> ids);
+
+    // 查询所有用户（用于重建embedding）
+    @Select("SELECT * FROM user WHERE status = 1")
+    List<UserInfo> selectAllUsers();
 }
