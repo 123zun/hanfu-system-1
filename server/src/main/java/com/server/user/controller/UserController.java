@@ -1,13 +1,17 @@
 package com.server.user.controller;
 
 import com.server.common.R;
+import com.server.security.UserPrincipal;
+import com.server.user.dto.LoginRequest;
 import com.server.user.entity.UserInfo;
 import com.server.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -31,7 +35,7 @@ public class UserController {
 
     // 用户注册
     @PostMapping("/register")
-    public R<?> register(@RequestBody UserInfo userInfo) {
+    public R<?> register(@RequestBody @Validated UserInfo userInfo) {
         try {
             R<?> result = userService.register(userInfo);
             return result;
@@ -43,13 +47,26 @@ public class UserController {
 
     // 用户登录
     @PostMapping("/login")
-    public R<?> login(@RequestBody Map<String, String> params) {
-        String username = params.get("username");
-        String password = params.get("password");
-        return userService.login(username, password);
+    public R<?> login(@RequestBody @Validated LoginRequest loginRequest) {
+        return userService.login(loginRequest);
     }
 
-    // 获取用户信息
+    // 退出登录（JWT无状态，服务端直接返回成功即可）
+    @PostMapping("/logout")
+    public R<?> logout() {
+        return R.success("退出成功");
+    }
+
+    // 获取当前登录用户信息（通过JWT解析）
+    @GetMapping("/info")
+    public R<?> getCurrentUserInfo(@AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            return R.error(401, "未登录");
+        }
+        return userService.getUserInfo(principal.getUserId());
+    }
+
+    // 根据ID获取用户信息
     @PostMapping("/info")
     public R<?> getUserInfo(@RequestBody Long id) {
         return userService.getUserInfo(id);
@@ -57,13 +74,17 @@ public class UserController {
 
     // 更新用户信息
     @PostMapping("/update")
-    public R<?> updateUserInfo(@RequestBody UserInfo userInfo) {
+    public R<?> updateUserInfo(@RequestBody UserInfo userInfo, @AuthenticationPrincipal UserPrincipal principal) {
+        // 防止普通用户修改他人信息（如果前端传了其他用户ID）
+        if (userInfo.getId() == null && principal != null) {
+            userInfo.setId(principal.getUserId());
+        }
         return userService.updateUserInfo(userInfo);
     }
 
     // 修改密码
     @PostMapping("/password")
-    public R<?> changePassword(@RequestBody Map<String, String> params) {
+    public R<?> changePassword(@RequestBody Map<String, String> params, @AuthenticationPrincipal UserPrincipal principal) {
         Long userId = Long.parseLong(params.get("id"));
         String oldPassword = params.get("oldPassword");
         String newPassword = params.get("newPassword");

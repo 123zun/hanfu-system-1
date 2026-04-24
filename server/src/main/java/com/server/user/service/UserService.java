@@ -1,6 +1,7 @@
 package com.server.user.service;
 
 import com.server.common.R;
+import com.server.user.dto.LoginRequest;
 import com.server.user.entity.UserInfo;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
@@ -15,7 +16,7 @@ public interface UserService {
     /**
      * 用户登录
      */
-    R<?> login(String username, String password);
+    R<?> login(LoginRequest loginRequest);
 
     /**
      * 根据ID获取用户信息

@@ -3,6 +3,10 @@ server:
   servlet:
     context-path: /
 
+jwt:
+  secret: hanfu_jwt_secret_key_2024_very_long_and_secure_must_be_at_least_256_bits
+  expiration: 86400000
+
 spring:
   application:
     name: hanfu-community

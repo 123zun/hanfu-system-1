@@ -1,20 +1,23 @@
 package com.server.user.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.server.common.R;
+import com.server.security.JwtTokenProvider;
+import com.server.user.dto.LoginRequest;
 import com.server.user.entity.UserInfo;
 import com.server.user.mapper.UserMapper;
 import com.server.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -25,6 +28,12 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -40,7 +49,14 @@ public class UserServiceImpl implements UserService {
                 userInfo.setAvatar("http://localhost:8080/uploads/avatars/default.png");
             }
 
-            // 3. 尝试插入（让数据库唯一约束来保证唯一性）
+            // 3. 密码用 BCrypt 加密
+            String rawPassword = userInfo.getPassword();
+            if (!StringUtils.hasText(rawPassword)) {
+                return R.error("密码不能为空");
+            }
+            userInfo.setPassword(passwordEncoder.encode(rawPassword));
+
+            // 4. 尝试插入（让数据库唯一约束来保证唯一性）
             int result = userMapper.insert(userInfo);
 
             if (result > 0) {
@@ -68,7 +84,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public R<?> login(String username, String password) {
+    public R<?> login(LoginRequest loginRequest) {
+        String username = loginRequest.getUsername();
+        String password = loginRequest.getPassword();
+
         if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
             return R.error("用户名和密码不能为空");
         }
@@ -79,16 +98,32 @@ public class UserServiceImpl implements UserService {
             return R.error("用户不存在");
         }
 
-        // 验证密码
-        if (!password.equals(userInfo.getPassword())) {
+        // 验证密码（BCrypt）
+        if (!passwordEncoder.matches(password, userInfo.getPassword())) {
             return R.error("密码错误");
         }
+
+        // 检查用户状态
+        if (userInfo.getStatus() == null || userInfo.getStatus() == 0) {
+            return R.error("账号已被禁用");
+        }
+
+        // 生成 JWT Token
+        String token = jwtTokenProvider.generateToken(
+                userInfo.getId(),
+                userInfo.getUsername(),
+                userInfo.getRole() != null ? userInfo.getRole() : "USER"
+        );
 
         // 登录成功，隐藏密码
         userInfo.setPassword(null);
 
-        // 返回用户信息
-        return R.success("登录成功", userInfo);
+        // 返回 Token 和用户信息
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", token);
+        data.put("userInfo", userInfo);
+
+        return R.success("登录成功", data);
     }
 
     @Override
@@ -161,12 +196,14 @@ public class UserServiceImpl implements UserService {
             return R.error("用户不存在");
         }
 
-        // 验证原密码
-        if (!oldPassword.equals(userInfo.getPassword())) {
+        // 验证原密码（BCrypt）
+        if (!passwordEncoder.matches(oldPassword, userInfo.getPassword())) {
             return R.error("原密码错误");
         }
 
-        int result = userMapper.updatePassword(userId, newPassword);
+        // 用 BCrypt 加密新密码
+        String encodedNewPassword = passwordEncoder.encode(newPassword);
+        int result = userMapper.updatePassword(userId, encodedNewPassword);
 
         if (result > 0) {
             return R.success("密码修改成功");
@@ -198,7 +235,7 @@ public class UserServiceImpl implements UserService {
         );
         Map<String, Object> data = new HashMap<>();
         data.put("available", count == 0);
-        data.put("message", count == 0 ? "邮箱可用" : "邮箱已存在");
+        data.put("message", count == 0 ? "邮箱可用" : "邮箱已被注册");
         return R.success(data);
     }
 
@@ -295,20 +332,6 @@ public class UserServiceImpl implements UserService {
             return R.success("删除成功");
         }
         return R.error("删除失败");
-    }
-
-    // 密码加密方法
-    private String encryptPassword(String password) {
-        return DigestUtils.md5DigestAsHex(password.getBytes());
-    }
-
-    // 批量删除
-    public R<?> deleteBatch(List<Long> ids) {
-        int result = userMapper.deleteBatch(ids);
-        if (result > 0) {
-            return R.success("批量删除成功，删除了" + result + "条记录");
-        }
-        return R.error("批量删除失败");
     }
 
     @Override
