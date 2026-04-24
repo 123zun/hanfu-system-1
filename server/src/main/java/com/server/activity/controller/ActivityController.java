@@ -8,8 +8,10 @@ import com.server.activity.entity.ActivitySignup;
 import com.server.activity.service.ActivityService;
 import com.server.common.R;
 import com.server.common.dto.AuditRequest;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -171,13 +173,12 @@ public class ActivityController {
     }
 
     @DeleteMapping("/delete/{id}")
-    public R<?> deleteActivity(@PathVariable Long id) {
+    @PreAuthorize("isAuthenticated()")
+    public R<?> deleteActivity(@PathVariable Long id, @RequestParam(required = false) Long userId) {
         try {
-            boolean deleted = activityService.deleteActivity(id);
-            if (deleted) {
-                return R.success("删除成功");
-            }
-            return R.error("删除失败");
+            Long currentUserId = userId != null ? userId : SecurityUtils.getCurrentUserId();
+            boolean deleted = activityService.deleteActivity(id, currentUserId);
+            return deleted ? R.success("删除成功") : R.error(403, "无权删除或删除失败");
         } catch (Exception e) {
             log.error("删除活动失败", e);
             return R.error("删除失败");

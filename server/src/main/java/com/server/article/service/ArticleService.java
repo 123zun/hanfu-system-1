@@ -39,6 +39,16 @@ public interface ArticleService {
     boolean deleteArticle(Long id);
 
     /**
+     * 判断当前用户是否有权限删除指定资讯（管理员可删任意，普通用户只能删自己的）
+     */
+    boolean canDelete(Long articleId, Long currentUserId);
+
+    /**
+     * 判断当前用户是否有权限更新指定资讯（管理员可改任意，普通用户只能改自己的）
+     */
+    boolean canUpdate(Long articleId, Long currentUserId);
+
+    /**
      * 获取分类列表
      */
     List<String> getArticleCategories();
@@ -47,8 +57,6 @@ public interface ArticleService {
      * 增加浏览量
      */
     void increaseViewCount(Long id);
-
-    // 在 ArticleService.java 中添加以下方法
 
     /**
      * 点赞/取消点赞文章

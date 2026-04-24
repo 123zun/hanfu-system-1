@@ -12,6 +12,7 @@ import com.server.article.mapper.ArticleMapper;
 import com.server.article.mapper.CollectionMapper;
 import com.server.article.mapper.LikeMapper;
 import com.server.article.service.ArticleService;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import com.server.entity.Likes;
 import com.server.entity.Collection;
-import com.server.entity.Likes;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -450,6 +450,22 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article> impl
         if (userId == null) return false;
         int count = collectionMapper.checkCollected(userId, "article", articleId);
         return count > 0;
+    }
+
+    @Override
+    public boolean canDelete(Long articleId, Long currentUserId) {
+        if (currentUserId == null) return false;
+        if (SecurityUtils.isAdmin()) return true;
+        Article article = articleMapper.selectById(articleId);
+        return article != null && article.getAuthorId().equals(currentUserId);
+    }
+
+    @Override
+    public boolean canUpdate(Long articleId, Long currentUserId) {
+        if (currentUserId == null) return false;
+        if (SecurityUtils.isAdmin()) return true;
+        Article article = articleMapper.selectById(articleId);
+        return article != null && article.getAuthorId().equals(currentUserId);
     }
 
     @Override

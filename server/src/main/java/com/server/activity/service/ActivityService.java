@@ -32,7 +32,7 @@ public interface ActivityService {
     /**
      * 删除活动
      */
-    boolean deleteActivity(Long id);
+    boolean deleteActivity(Long id, Long userId);
 
     /**
      * 报名活动

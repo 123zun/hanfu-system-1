@@ -5,8 +5,10 @@ import com.server.article.dto.ArticleDTO;
 import com.server.article.dto.ArticlePageDTO;
 import com.server.article.dto.ArticleQuery;
 import com.server.article.service.ArticleService;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -233,18 +235,12 @@ public class ArticleController {
      * 创建资讯
      */
     @PostMapping("/create")
+    @PreAuthorize("isAuthenticated()")
     public R<?> createArticle(@RequestBody ArticleDTO articleDTO) {
         try {
             log.info("创建资讯: title={}, authorId={}", articleDTO.getTitle(), articleDTO.getAuthorId());
-
             ArticleDTO result = articleService.createArticle(articleDTO);
-
-            if (result != null) {
-                return R.success("创建成功", result);
-            } else {
-                return R.error("创建失败");
-            }
-
+            return result != null ? R.success("创建成功", result) : R.error("创建失败");
         } catch (Exception e) {
             log.error("创建资讯失败", e);
             return R.error("创建失败: " + e.getMessage());
@@ -255,51 +251,37 @@ public class ArticleController {
      * 更新资讯
      */
     @PutMapping("/update/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> updateArticle(@PathVariable Long id, @RequestBody ArticleDTO articleDTO) {
-        try {
-            log.info("更新资讯: id={}, title={}", id, articleDTO.getTitle());
-
-            articleDTO.setId(id);
-            ArticleDTO result = articleService.updateArticle(articleDTO);
-
-            if (result != null) {
-                return R.success("更新成功", result);
-            } else {
-                return R.error("更新失败");
-            }
-
-        } catch (Exception e) {
-            log.error("更新资讯失败", e);
-            return R.error("更新失败: " + e.getMessage());
+        // 管理员可更新任意，用户只能更新自己的（检查authorId）
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && !articleService.canUpdate(id, currentUserId)) {
+            return R.error(403, "只能修改自己的资讯");
         }
+        articleDTO.setId(id);
+        ArticleDTO result = articleService.updateArticle(articleDTO);
+        return result != null ? R.success("更新成功", result) : R.error("更新失败");
     }
 
     /**
      * 删除资讯（软删除）
      */
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> deleteArticle(@PathVariable Long id) {
-        try {
-            log.info("删除资讯: id={}", id);
-
-            boolean deleted = articleService.deleteArticle(id);
-
-            if (deleted) {
-                return R.success("删除成功");
-            } else {
-                return R.error("删除失败");
-            }
-
-        } catch (Exception e) {
-            log.error("删除资讯失败", e);
-            return R.error("删除失败: " + e.getMessage());
+        // 管理员可删任意，普通用户只能删自己的（通过userId前端控制）
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && !articleService.canDelete(id, currentUserId)) {
+            return R.error(403, "只能删除自己的资讯");
         }
+        return articleService.deleteArticle(id) ? R.success("删除成功") : R.error("删除失败");
     }
 
     /**
      * 获取分类列表
      */
     @GetMapping("/categories")
+    @PreAuthorize("isAuthenticated()")
     public R<?> getArticleCategories() {
         try {
             List<String> categories = articleService.getArticleCategories();

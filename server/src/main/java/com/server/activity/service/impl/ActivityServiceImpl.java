@@ -10,6 +10,7 @@ import com.server.activity.entity.ActivitySignup;
 import com.server.activity.mapper.ActivityMapper;
 import com.server.activity.mapper.ActivitySignupMapper;
 import com.server.activity.service.ActivityService;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -174,8 +175,14 @@ public class ActivityServiceImpl extends ServiceImpl<ActivityMapper, Activity> i
 
     @Override
     @Transactional
-    public boolean deleteActivity(Long id) {
-        log.info("逻辑删除活动: id={}", id);
+    public boolean deleteActivity(Long id, Long userId) {
+        log.info("逻辑删除活动: id={}, userId={}", id, userId);
+        Activity activity = activityMapper.selectById(id);
+        if (activity == null) return false;
+        if (!"ADMIN".equals(SecurityUtils.getCurrentRole()) && !activity.getOrganizerId().equals(userId)) {
+            log.warn("无权删除活动: userId={}, organizerId={}", userId, activity.getOrganizerId());
+            return false;
+        }
         return activityMapper.deleteById(id) > 0;
     }
 
