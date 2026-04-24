@@ -3,8 +3,10 @@ package com.server.article.controller;
 import com.server.article.dto.CommentDTO;
 import com.server.article.service.CommentService;
 import com.server.common.R;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,9 +21,10 @@ public class CommentController {
     private CommentService commentService;
 
     /**
-     * 获取评论列表
+     * 获取评论列表 - 公开接口
      */
     @GetMapping("/list")
+    @PreAuthorize("permitAll()")
     public R<?> getComments(
             @RequestParam String targetType,
             @RequestParam Long targetId,
@@ -39,9 +42,10 @@ public class CommentController {
     }
 
     /**
-     * 添加评论
+     * 添加评论 - 需要登录
      */
     @PostMapping("/add")
+    @PreAuthorize("isAuthenticated()")
     public R<?> addComment(@RequestBody CommentDTO commentDTO) {
         try {
             log.info("添加评论: userId={}, targetType={}, targetId={}",
@@ -69,9 +73,10 @@ public class CommentController {
     }
 
     /**
-     * 删除评论
+     * 删除评论 - 需要是本人或管理员
      */
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> deleteComment(
             @PathVariable Long id,
             @RequestParam Long userId) {
@@ -93,9 +98,10 @@ public class CommentController {
     }
 
     /**
-     * 点赞/取消点赞评论
+     * 点赞/取消点赞评论 - 需要登录
      */
     @PostMapping("/like/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> likeComment(
             @PathVariable Long id,
             @RequestParam Long userId) {
@@ -117,9 +123,10 @@ public class CommentController {
     }
 
     /**
-     * 检查用户是否点赞了评论
+     * 检查用户是否点赞了评论 - 需要登录
      */
     @GetMapping("/like/check")
+    @PreAuthorize("isAuthenticated()")
     public R<?> checkLiked(
             @RequestParam Long commentId,
             @RequestParam Long userId) {

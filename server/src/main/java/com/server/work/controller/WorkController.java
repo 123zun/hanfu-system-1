@@ -2,12 +2,14 @@ package com.server.work.controller;
 
 import com.server.common.R;
 import com.server.common.dto.AuditRequest;
+import com.server.security.SecurityUtils;
 import com.server.work.dto.WorkDTO;
 import com.server.work.dto.WorkPageDTO;
 import com.server.work.dto.WorkQuery;
 import com.server.work.service.WorkService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,18 +31,20 @@ public class WorkController {
     // ==================== 文件上传接口 ====================
 
     /**
-     * 上传帖子封面图
+     * 上传帖子封面图 - 需要登录
      */
     @PostMapping("/upload-cover")
+    @PreAuthorize("isAuthenticated()")
     public R<?> uploadCover(@RequestParam("file") MultipartFile file) {
         log.info("上传帖子封面: {}", file.getOriginalFilename());
         return uploadImage(file, "covers");
     }
 
     /**
-     * 上传帖子内容图片
+     * 上传帖子内容图片 - 需要登录
      */
     @PostMapping("/upload-image")
+    @PreAuthorize("isAuthenticated()")
     public R<?> uploadContentImage(@RequestParam("file") MultipartFile file) {
         log.info("上传帖子内容图片: {}", file.getOriginalFilename());
         return uploadImage(file, "content");
@@ -123,7 +127,7 @@ public class WorkController {
     // ==================== 帖子 CRUD 接口 ====================
 
     /**
-     * 获取作品列表（分页）
+     * 获取作品列表（分页） - 公开接口，无需登录
      */
     @GetMapping("/list")
     public R<?> getWorkList(
@@ -153,7 +157,7 @@ public class WorkController {
     }
 
     /**
-     * 获取作品详情
+     * 获取作品详情 - 公开接口，无需登录
      */
     @GetMapping("/detail/{id}")
     public R<?> getWorkDetail(
@@ -175,9 +179,10 @@ public class WorkController {
     }
 
     /**
-     * 获取类型列表
+     * 获取类型列表 - 公开接口
      */
     @GetMapping("/types")
+    @PreAuthorize("permitAll()")
     public R<?> getTypes() {
         try {
             return R.success(workService.getWorkTypes());
@@ -188,10 +193,11 @@ public class WorkController {
     }
 
     /**
-     * 创建作品
+     * 创建作品 - 需要登录
      */
     @PostMapping("/create")
-    public R<?> createWork(@RequestBody WorkDTO workDTO) {
+    @PreAuthorize("isAuthenticated()")
+    public R<?> createWork(@RequestBody WorkDTO workDTO, @RequestParam Long userId) {
         try {
             // 获取用户ID
             if (workDTO.getUserId() == null) {
@@ -211,12 +217,13 @@ public class WorkController {
     }
 
     /**
-     * 更新作品
+     * 更新作品 - 需要是本人或管理员
      */
     @PutMapping("/update")
-    public R<?> updateWork(@RequestBody WorkDTO workDTO) {
+    @PreAuthorize("isAuthenticated()")
+    public R<?> updateWork(@RequestBody WorkDTO workDTO, @RequestParam Long userId) {
         try {
-            WorkDTO result = workService.updateWork(workDTO);
+            WorkDTO result = workService.updateWork(workDTO, userId);
             if (result != null) {
                 return R.success("更新成功", result);
             } else {
@@ -229,9 +236,10 @@ public class WorkController {
     }
 
     /**
-     * 删除作品
+     * 删除作品 - 需要是本人或管理员
      */
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> deleteWork(
             @PathVariable Long id,
             @RequestParam Long userId) {
@@ -250,9 +258,10 @@ public class WorkController {
     }
 
     /**
-     * 点赞/取消点赞作品
+     * 点赞/取消点赞作品 - 需要登录
      */
     @PostMapping("/like/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> likeWork(
             @PathVariable Long id,
             @RequestParam Long userId) {
@@ -267,9 +276,10 @@ public class WorkController {
     }
 
     /**
-     * 收藏/取消收藏作品
+     * 收藏/取消收藏作品 - 需要登录
      */
     @PostMapping("/collect/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> collectWork(
             @PathVariable Long id,
             @RequestParam Long userId) {
@@ -284,9 +294,10 @@ public class WorkController {
     }
 
     /**
-     * 获取热门帖子
+     * 获取热门帖子 - 公开接口
      */
     @GetMapping("/hot")
+    @PreAuthorize("permitAll()")
     public R<?> getHotWorks(@RequestParam(defaultValue = "5") Integer limit) {
         try {
             log.info("获取热门帖子, limit={}", limit);
@@ -298,9 +309,10 @@ public class WorkController {
     }
 
     /**
-     * 审核作品
+     * 审核作品 - 仅管理员
      */
     @PostMapping("/audit/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public R<?> auditWork(
             @PathVariable Long id,
             @RequestBody AuditRequest request) {
@@ -318,9 +330,10 @@ public class WorkController {
     }
 
     /**
-     * 获取待审核作品列表（管理员）
+     * 获取待审核作品列表 - 仅管理员
      */
     @GetMapping("/pending-audit")
+    @PreAuthorize("hasRole('ADMIN')")
     public R<?> getPendingAuditList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "12") Integer size) {
@@ -336,9 +349,10 @@ public class WorkController {
     }
 
     /**
-     * 获取用户收藏的作品列表
+     * 获取用户收藏的作品列表 - 需要登录
      */
     @GetMapping("/my-collections")
+    @PreAuthorize("isAuthenticated()")
     public R<?> getMyCollections(@RequestParam Long userId) {
         try {
             log.info("获取用户收藏作品: userId={}", userId);

@@ -12,6 +12,7 @@ import com.server.resource.dto.ResourceQuery;
 import com.server.resource.entity.Resource;
 import com.server.resource.mapper.ResourceMapper;
 import com.server.resource.service.ResourceService;
+import com.server.security.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -147,7 +148,7 @@ public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> i
     }
 
     /**
-     * 更新资源
+     * 更新资源 - 需要是本人或管理员
      */
     @Override
     @Transactional
@@ -157,6 +158,14 @@ public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> i
         Resource existingResource = this.getById(resourceDTO.getId());
         if (existingResource == null) {
             log.error("资源不存在: id={}", resourceDTO.getId());
+            return null;
+        }
+
+        // 检查权限：必须是本人或管理员
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && !existingResource.getUploaderId().equals(currentUserId)) {
+            log.warn("无权更新资源: resourceId={}, currentUserId={}, uploaderId={}",
+                    resourceDTO.getId(), currentUserId, existingResource.getUploaderId());
             return null;
         }
 
@@ -190,7 +199,7 @@ public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> i
     }
 
     /**
-     * 删除资源（软删除）
+     * 删除资源 - 需要是本人或管理员
      */
     @Override
     @Transactional
@@ -200,6 +209,14 @@ public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> i
         Resource resource = this.getById(id);
         if (resource == null) {
             log.error("资源不存在: id={}", id);
+            return false;
+        }
+
+        // 检查权限：必须是本人或管理员
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        if (!SecurityUtils.isAdmin() && !resource.getUploaderId().equals(currentUserId)) {
+            log.warn("无权删除资源: resourceId={}, currentUserId={}, uploaderId={}",
+                    id, currentUserId, resource.getUploaderId());
             return false;
         }
 

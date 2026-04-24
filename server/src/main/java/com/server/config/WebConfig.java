@@ -17,6 +17,11 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:./uploads/")
                 .setCachePeriod(0);
+
+        // 映射 /default/** 到 classpath:/static/default/
+        registry.addResourceHandler("/default/**")
+                .addResourceLocations("classpath:/static/default/")
+                .setCachePeriod(0);
     }
 
     @Bean

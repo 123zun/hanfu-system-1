@@ -6,9 +6,11 @@ import com.server.resource.dto.ResourcePageDTO;
 import com.server.resource.dto.ResourceQuery;
 import com.server.resource.entity.Resource;
 import com.server.resource.service.ResourceService;
+import com.server.security.SecurityUtils;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,9 +35,10 @@ public class ResourceController {
     // ==================== 文件上传接口 ====================
 
     /**
-     * 上传资源文件（同时写入数据库记录）
+     * 上传资源文件（同时写入数据库记录） - 需要登录
      */
     @PostMapping("/upload")
+    @PreAuthorize("isAuthenticated()")
     @Transactional
     public R<?> uploadResource(@RequestParam("file") MultipartFile file,
                                @RequestParam(required = false) String title,
@@ -139,9 +142,10 @@ public class ResourceController {
     }
 
     /**
-     * 预览/下载文件（通过URL参数区分preview或download）
+     * 预览/下载文件（通过URL参数区分preview或download） - 公开接口
      */
     @GetMapping("/file/{id}")
+    @PreAuthorize("permitAll()")
     public void serveFile(@PathVariable Long id,
                           @RequestParam(required = false, defaultValue = "false") Boolean preview,
                           HttpServletResponse response) {
@@ -206,9 +210,10 @@ public class ResourceController {
     }
 
     /**
-     * 获取资源下载信息
+     * 获取资源下载信息 - 公开接口
      */
     @GetMapping("/download/{id}")
+    @PreAuthorize("permitAll()")
     public R<?> downloadResource(@PathVariable Long id) {
         log.info("下载资源: id={}", id);
 
@@ -239,9 +244,10 @@ public class ResourceController {
     // ==================== 资源 CRUD 接口 ====================
 
     /**
-     * 获取资源列表
+     * 获取资源列表 - 公开接口
      */
     @GetMapping("/list")
+    @PreAuthorize("permitAll()")
     public R<?> getResourceList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -276,9 +282,10 @@ public class ResourceController {
     }
 
     /**
-     * 获取资源详情
+     * 获取资源详情 - 公开接口
      */
     @GetMapping("/detail/{id}")
+    @PreAuthorize("permitAll()")
     public R<?> getResourceDetail(@PathVariable Long id, @RequestParam(required = false) Long userId) {
         try {
             log.info("获取资源详情: id={}, userId={}", id, userId);
@@ -297,9 +304,10 @@ public class ResourceController {
     }
 
     /**
-     * 创建资源（手动创建，不上传文件）
+     * 创建资源（手动创建，不上传文件） - 需要登录
      */
     @PostMapping("/create")
+    @PreAuthorize("isAuthenticated()")
     public R<?> createResource(@RequestBody ResourceDTO resourceDTO) {
         try {
             log.info("创建资源: title={}, uploaderId={}", resourceDTO.getTitle(), resourceDTO.getUploaderId());
@@ -319,9 +327,10 @@ public class ResourceController {
     }
 
     /**
-     * 更新资源
+     * 更新资源 - 需要是本人或管理员
      */
     @PutMapping("/update/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> updateResource(@PathVariable Long id, @RequestBody ResourceDTO resourceDTO) {
         try {
             log.info("更新资源: id={}", id);
@@ -342,9 +351,10 @@ public class ResourceController {
     }
 
     /**
-     * 删除资源
+     * 删除资源 - 需要是本人或管理员
      */
     @DeleteMapping("/delete/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> deleteResource(@PathVariable Long id) {
         try {
             log.info("删除资源: id={}", id);
@@ -364,9 +374,10 @@ public class ResourceController {
     }
 
     /**
-     * 获取类型列表
+     * 获取类型列表 - 公开接口
      */
     @GetMapping("/types")
+    @PreAuthorize("permitAll()")
     public R<?> getResourceTypes() {
         try {
             List<String> types = resourceService.getResourceCategories();
@@ -378,9 +389,10 @@ public class ResourceController {
     }
 
     /**
-     * 点赞/取消点赞资源
+     * 点赞/取消点赞资源 - 需要登录
      */
     @PostMapping("/like/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> likeResource(@PathVariable Long id, @RequestParam Long userId) {
         try {
             log.info("点赞/取消点赞资源: resourceId={}, userId={}", id, userId);
@@ -393,9 +405,10 @@ public class ResourceController {
     }
 
     /**
-     * 检查用户是否点赞了资源
+     * 检查用户是否点赞了资源 - 需要登录
      */
     @GetMapping("/like/check")
+    @PreAuthorize("isAuthenticated()")
     public R<?> checkLiked(@RequestParam Long resourceId, @RequestParam Long userId) {
         try {
             boolean liked = resourceService.isLiked(resourceId, userId);
@@ -407,9 +420,10 @@ public class ResourceController {
     }
 
     /**
-     * 收藏/取消收藏资源
+     * 收藏/取消收藏资源 - 需要登录
      */
     @PostMapping("/collect/{id}")
+    @PreAuthorize("isAuthenticated()")
     public R<?> collectResource(@PathVariable Long id, @RequestParam Long userId) {
         try {
             log.info("收藏/取消收藏资源: resourceId={}, userId={}", id, userId);
@@ -422,9 +436,10 @@ public class ResourceController {
     }
 
     /**
-     * 检查用户是否收藏了资源
+     * 检查用户是否收藏了资源 - 需要登录
      */
     @GetMapping("/collect/check")
+    @PreAuthorize("isAuthenticated()")
     public R<?> checkCollected(@RequestParam Long resourceId, @RequestParam Long userId) {
         try {
             boolean collected = resourceService.isCollected(resourceId, userId);

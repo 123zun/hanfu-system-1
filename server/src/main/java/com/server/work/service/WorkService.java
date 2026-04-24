@@ -25,8 +25,9 @@ public interface WorkService {
 
     /**
      * 更新作品
+     * @param currentUserId 当前登录用户ID，用于权限校验
      */
-    WorkDTO updateWork(WorkDTO workDTO);
+    WorkDTO updateWork(WorkDTO workDTO, Long currentUserId);
 
     /**
      * 删除作品

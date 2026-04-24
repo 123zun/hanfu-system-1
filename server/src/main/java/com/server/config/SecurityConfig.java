@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/api/user/check/**",
                                 "/api/user/health",
                                 "/api/dev/**",
-                                "/uploads/**"
+                                "/uploads/**",
+                                "/default/**"
                         ).permitAll()
                         // 其他所有接口都需要认证
                         .anyRequest().authenticated()

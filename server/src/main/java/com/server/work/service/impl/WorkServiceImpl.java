@@ -15,6 +15,7 @@ import com.server.work.dto.WorkQuery;
 import com.server.work.entity.Work;
 import com.server.work.mapper.WorkMapper;
 import com.server.work.service.WorkService;
+import com.server.security.SecurityUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -158,11 +159,17 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
 
     @Override
     @Transactional
-    public WorkDTO updateWork(WorkDTO workDTO) {
-        log.info("更新作品: id={}", workDTO.getId());
+    public WorkDTO updateWork(WorkDTO workDTO, Long currentUserId) {
+        log.info("更新作品: id={}, currentUserId={}", workDTO.getId(), currentUserId);
 
         Work work = workMapper.selectById(workDTO.getId());
         if (work == null) {
+            return null;
+        }
+
+        // 检查权限：必须是本人或管理员
+        if (!SecurityUtils.isAdmin() && !work.getUserId().equals(currentUserId)) {
+            log.warn("无权更新作品: workId={}, currentUserId={}, ownerId={}", workDTO.getId(), currentUserId, work.getUserId());
             return null;
         }
 
@@ -177,8 +184,6 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         }
         if (workDTO.getCoverImage() != null && !workDTO.getCoverImage().isEmpty()) {
             work.setCoverImage(workDTO.getCoverImage());
-        } else {
-            work.setCoverImage("http://localhost:8080/default/tiezidefault.png");
         }
         if (workDTO.getImages() != null) {
             work.setImages(toJson(workDTO.getImages()));
@@ -188,7 +193,7 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
         }
 
         workMapper.updateById(work);
-        return convertToDTO(work, null);
+        return convertToDTO(work, currentUserId);
     }
 
     @Override
@@ -201,8 +206,9 @@ public class WorkServiceImpl extends ServiceImpl<WorkMapper, Work> implements Wo
             return false;
         }
 
-        // 只能删除自己的作品
-        if (!work.getUserId().equals(userId)) {
+        // 管理员可删除任意作品；普通用户只能删除自己的
+        if (!SecurityUtils.isAdmin() && !work.getUserId().equals(userId)) {
+            log.warn("无权删除作品: workId={}, userId={}, ownerId={}", id, userId, work.getUserId());
             return false;
         }
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.server.article.dto.CommentDTO;
 import com.server.article.mapper.CommentMapper;
 import com.server.article.service.CommentService;
+import com.server.security.SecurityUtils;
 import com.server.entity.Comment;
 import com.server.entity.Likes;
 import com.server.article.mapper.LikeMapper;
@@ -86,8 +87,9 @@ public class CommentServiceImpl implements CommentService {
             return false;
         }
 
-        // 只能删除自己的评论
-        if (!comment.getUserId().equals(userId)) {
+        // 管理员可删除任意评论；普通用户只能删除自己的
+        if (!SecurityUtils.isAdmin() && !comment.getUserId().equals(userId)) {
+            log.warn("无权删除评论: commentId={}, userId={}, ownerId={}", commentId, userId, comment.getUserId());
             return false;
         }
 
