@@ -281,6 +281,7 @@ public class ActivityController {
      * 审核活动
      */
     @PostMapping("/audit/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public R<?> auditActivity(
             @PathVariable Long id,
             @RequestBody AuditRequest request) {
@@ -301,6 +302,7 @@ public class ActivityController {
      * 获取待审核活动列表（管理员）
      */
     @GetMapping("/pending-audit")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public R<?> getPendingAuditList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "9") Integer size) {

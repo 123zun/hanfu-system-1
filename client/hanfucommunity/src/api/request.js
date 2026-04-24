@@ -48,7 +48,18 @@ request.interceptors.request.use(
 
         // 从Pinia store或localStorage获取token
         const userStore = useUserStore()
-        const token = userStore.token || localStorage.getItem('hanfu_token')
+        const piniaToken = userStore?.token
+        const storageToken = localStorage.getItem('hanfu_token')
+        const token = piniaToken || storageToken
+
+        console.log('[🔍 请求调试]', {
+            url: config.url,
+            method: config.method,
+            piniaToken存在: !!piniaToken,
+            storageToken存在: !!storageToken,
+            最终token: token ? token.substring(0, 30) + '...' : null,
+            Authorization头: token ? `Bearer ${token.substring(0, 30)}...` : '无token'
+        })
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`
@@ -155,6 +166,14 @@ request.interceptors.response.use(
                     errorResponse.message = error.response.data.message || error.response.data.msg || '请求失败'
                 }
             }
+
+            console.error('[🚨 认证失败详情]', {
+                url: error.config?.url,
+                status: error.response.status,
+                errorMessage: errorResponse.message,
+                responseData: error.response.data,
+                requestHeaders: error.config?.headers,
+            })
 
             // 显示错误消息
             switch (error.response.status) {

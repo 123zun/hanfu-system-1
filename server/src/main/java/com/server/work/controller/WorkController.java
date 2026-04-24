@@ -333,7 +333,7 @@ public class WorkController {
      * 获取待审核作品列表 - 仅管理员
      */
     @GetMapping("/pending-audit")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public R<?> getPendingAuditList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "12") Integer size) {

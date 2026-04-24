@@ -159,6 +159,9 @@ const handleLogin = async () => {
 
         // 保存到localStorage
         localStorage.setItem('hanfu_user', JSON.stringify(userInfo))
+        if (data.token) {
+          localStorage.setItem('hanfu_token', data.token)
+        }
         if (userInfo.role) {
           localStorage.setItem('hanfu_role', userInfo.role)
         }
