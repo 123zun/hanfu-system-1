@@ -39,6 +39,7 @@ public class SecurityConfig {
                                 "/api/user/register",
                                 "/api/user/check/**",
                                 "/api/user/health",
+                                "/api/dev/**",
                                 "/uploads/**"
                         ).permitAll()
                         // 其他所有接口都需要认证
