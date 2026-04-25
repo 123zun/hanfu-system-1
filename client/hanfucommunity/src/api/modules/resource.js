@@ -106,9 +106,7 @@ export const uploadResource = (file, params) => {
         url: '/resource/upload',
         method: 'POST',
         data: formData,
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
+        isUpload: true
     })
 }
 

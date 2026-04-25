@@ -7,9 +7,7 @@ import router from '@/router'
 const request = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
     timeout: 15000, // 请求超时时间
-    headers: {
-        'Content-Type': 'application/json;charset=UTF-8'
-    }
+    // 不设置默认 Content-Type，让 axios 自动处理
 })
 
 // 全局 loading 实例
@@ -65,9 +63,12 @@ request.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`
         }
 
-        // 如果是上传文件，修改Content-Type
-        if (config.isUpload) {
-            config.headers['Content-Type'] = 'multipart/form-data'
+        // 如果 data 是 FormData，删除 Content-Type 让 axios 自动处理（包含正确的 boundary）
+        // 否则设置 JSON 的 Content-Type
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type']
+        } else if (!config.headers['Content-Type']) {
+            config.headers['Content-Type'] = 'application/json;charset=UTF-8'
         }
 
         return config

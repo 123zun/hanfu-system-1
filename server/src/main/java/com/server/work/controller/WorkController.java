@@ -197,7 +197,7 @@ public class WorkController {
      */
     @PostMapping("/create")
     @PreAuthorize("isAuthenticated()")
-    public R<?> createWork(@RequestBody WorkDTO workDTO, @RequestParam Long userId) {
+    public R<?> createWork(@RequestBody WorkDTO workDTO) {
         try {
             // 获取用户ID
             if (workDTO.getUserId() == null) {
@@ -221,9 +221,12 @@ public class WorkController {
      */
     @PutMapping("/update")
     @PreAuthorize("isAuthenticated()")
-    public R<?> updateWork(@RequestBody WorkDTO workDTO, @RequestParam Long userId) {
+    public R<?> updateWork(@RequestBody WorkDTO workDTO) {
         try {
-            WorkDTO result = workService.updateWork(workDTO, userId);
+            if (workDTO.getUserId() == null) {
+                return R.error("用户未登录");
+            }
+            WorkDTO result = workService.updateWork(workDTO, workDTO.getUserId());
             if (result != null) {
                 return R.success("更新成功", result);
             } else {

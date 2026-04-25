@@ -53,6 +53,12 @@ public class SecurityConfig {
                                 "/api/user/health",
                                 "/api/user/forgot/**",
                                 "/api/dev/**",
+                                "/api/resource/upload",
+                                "/api/resource/file/**",
+                                "/api/resource/download/**",
+                                "/api/resource/types",
+                                "/api/resource/list",
+                                "/api/resource/detail/**",
                                 "/uploads/**",
                                 "/default/**"
                         ).permitAll()

@@ -488,13 +488,7 @@ const validateOldPassword = (rule, value, callback) => {
     callback(new Error('请输入原密码'))
     return
   }
-
-  // 与表单中的密码比对
-  if (value !== profileForm.password) {
-    callback(new Error('原密码不正确'))
-  } else {
-    callback()
-  }
+  callback()
 }
 
 // 验证新密码

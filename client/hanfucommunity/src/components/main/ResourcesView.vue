@@ -212,13 +212,9 @@
               :on-change="handleFileChange"
               :on-remove="handleFileRemove"
               :file-list="fileList"
-              drag
               class="upload-area"
           >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div class="el-upload__text">
-              将文件拖到此处，或<em>点击上传</em>
-            </div>
+            <el-button type="primary" size="small">选择文件</el-button>
             <template #tip>
               <div class="el-upload__tip">
                 支持图片、视频、文档等文件，单个文件不超过100MB
@@ -526,8 +522,9 @@ const handleCurrentChange = (val) => {
 const handleFileChange = (file, files) => {
   fileList.value = files
   // 自动设置标题为文件名
-  if (!uploadForm.title && file.name) {
-    uploadForm.title = file.name.substring(0, file.name.lastIndexOf('.'))
+  const fileName = file.name || (file.raw ? file.raw.name : '')
+  if (!uploadForm.title && fileName) {
+    uploadForm.title = fileName.substring(0, fileName.lastIndexOf('.'))
   }
 }
 
@@ -538,6 +535,8 @@ const handleFileRemove = () => {
 
 // 上传资源
 const handleUpload = async () => {
+  console.log('点击上传，fileList:', fileList.value, 'length:', fileList.value.length)
+  
   if (fileList.value.length === 0) {
     ElMessage.warning('请选择要上传的文件')
     return

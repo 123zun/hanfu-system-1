@@ -235,7 +235,7 @@ public class ArticleController {
      * 创建资讯
      */
     @PostMapping("/create")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public R<?> createArticle(@RequestBody ArticleDTO articleDTO) {
         try {
             log.info("创建资讯: title={}, authorId={}", articleDTO.getTitle(), articleDTO.getAuthorId());
@@ -251,13 +251,8 @@ public class ArticleController {
      * 更新资讯
      */
     @PutMapping("/update/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public R<?> updateArticle(@PathVariable Long id, @RequestBody ArticleDTO articleDTO) {
-        // 管理员可更新任意，用户只能更新自己的（检查authorId）
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        if (!SecurityUtils.isAdmin() && !articleService.canUpdate(id, currentUserId)) {
-            return R.error(403, "只能修改自己的资讯");
-        }
         articleDTO.setId(id);
         ArticleDTO result = articleService.updateArticle(articleDTO);
         return result != null ? R.success("更新成功", result) : R.error("更新失败");
@@ -267,13 +262,8 @@ public class ArticleController {
      * 删除资讯（软删除）
      */
     @DeleteMapping("/delete/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public R<?> deleteArticle(@PathVariable Long id) {
-        // 管理员可删任意，普通用户只能删自己的（通过userId前端控制）
-        Long currentUserId = SecurityUtils.getCurrentUserId();
-        if (!SecurityUtils.isAdmin() && !articleService.canDelete(id, currentUserId)) {
-            return R.error(403, "只能删除自己的资讯");
-        }
         return articleService.deleteArticle(id) ? R.success("删除成功") : R.error("删除失败");
     }
 

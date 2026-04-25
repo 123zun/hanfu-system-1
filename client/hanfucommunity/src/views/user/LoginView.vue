@@ -40,7 +40,7 @@
           <el-form-item prop="username">
             <el-input
                 v-model="loginForm.username"
-                placeholder="请输入用户名/邮箱/手机号"
+                placeholder="请输入用户名"
                 size="large"
                 :prefix-icon="User"
                 clearable

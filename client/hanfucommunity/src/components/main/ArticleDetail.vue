@@ -174,6 +174,7 @@
                         <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
                       </div>
                       <div class="reply-text">{{ reply.content }}</div>
+                    </div>
                     <div class="reply-footer">
                       <el-button
                           link

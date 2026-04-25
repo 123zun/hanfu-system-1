@@ -35,10 +35,10 @@ public class ResourceController {
     // ==================== 文件上传接口 ====================
 
     /**
-     * 上传资源文件（同时写入数据库记录） - 需要登录
+     * 上传资源文件（同时写入数据库记录） - 公开接口
      */
     @PostMapping("/upload")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     @Transactional
     public R<?> uploadResource(@RequestParam("file") MultipartFile file,
                                @RequestParam(required = false) String title,
