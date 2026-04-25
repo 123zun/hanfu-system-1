@@ -93,9 +93,9 @@
             <h4 @click="viewPostDetail(item.id)">{{ item.title }}</h4>
             <p class="post-excerpt">{{ item.description || '暂无描述' }}</p>
             <div class="post-meta">
-              <span class="meta-item">
+              <span class="meta-item user-info-item" @click.stop="openUserProfile(item.userId)">
                 <el-avatar :size="20" :src="getImageUrl(item.userAvatar)" />
-                {{ item.userName || '匿名用户' }}
+                <span class="username-link">{{ item.userName || '匿名用户' }}</span>
               </span>
               <span class="meta-item">
                 <el-icon><View /></el-icon>
@@ -156,6 +156,12 @@
         />
       </div>
     </div>
+
+    <!-- 用户主页弹窗 -->
+    <UserProfileDialog
+        v-model="userProfileDialogVisible"
+        :user-id="profileDialogUserId"
+    />
   </div>
 </template>
 
@@ -174,6 +180,7 @@ import {
 import { getWorkList, deleteWork, getWorkTypes } from '@/api/modules/work'
 import { getRecommendations } from '@/api/modules/recommend'
 import { isAdmin, getCurrentUserId } from '@/utils/permission'
+import UserProfileDialog from './UserProfileDialog.vue'
 
 const router = useRouter()
 
@@ -203,6 +210,10 @@ const postsList = reactive([])
 const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
+
+// 用户主页弹窗
+const userProfileDialogVisible = ref(false)
+const profileDialogUserId = ref(null)
 
 // 页面加载
 onMounted(() => {
@@ -376,6 +387,13 @@ const handleSizeChange = (val) => {
 const handleCurrentChange = (val) => {
   currentPage.value = val
   loadPosts()
+}
+
+// 打开用户主页弹窗
+const openUserProfile = (userId) => {
+  if (!userId) return
+  profileDialogUserId.value = userId
+  userProfileDialogVisible.value = true
 }
 
 // 获取图片URL
@@ -574,6 +592,19 @@ const getTypeName = (type) => {
 
 .post-meta .el-avatar {
   margin-right: 2px;
+}
+
+.user-info-item {
+  cursor: pointer;
+}
+
+.username-link {
+  color: #666;
+  transition: color 0.3s;
+}
+
+.username-link:hover {
+  color: #d4af37;
 }
 
 .post-actions {

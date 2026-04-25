@@ -108,3 +108,52 @@ export const updateUser = (data) => {
         data
     })
 }
+
+// ==================== 关注功能 ====================
+
+// 获取用户主页信息
+export const getUserProfile = (userId, currentUserId) => {
+    return request({
+        url: '/user/profile',
+        method: 'GET',
+        params: { userId, currentUserId }
+    })
+}
+
+// 关注用户
+export const followUser = (followerId, followingId) => {
+    return request({
+        url: '/follow/follow',
+        method: 'POST',
+        data: null,
+        params: { followerId, followingId }
+    })
+}
+
+// 取消关注
+export const unfollowUser = (followerId, followingId) => {
+    return request({
+        url: '/follow/unfollow',
+        method: 'POST',
+        data: null,
+        params: { followerId, followingId }
+    })
+}
+
+// 检查关注状态
+export const checkFollow = (followerId, followingId) => {
+    return request({
+        url: '/follow/check',
+        method: 'GET',
+        params: { followerId, followingId }
+    })
+}
+
+// 获取用户关注/粉丝数
+export const getFollowCounts = (userId) => {
+    return request({
+        url: '/follow/counts',
+        method: 'GET',
+        params: { userId }
+    })
+}

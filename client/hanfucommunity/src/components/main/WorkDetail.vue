@@ -9,7 +9,7 @@
         <div class="work-header">
           <h1 class="work-title">{{ work.title }}</h1>
           <div class="work-meta">
-            <div class="author-info">
+            <div class="author-info" @click="openUserProfile" style="cursor:pointer;">
               <el-avatar :size="40" :src="getImageUrl(work.userAvatar)" />
               <div class="author-detail">
                 <span class="author-name">{{ work.userName || '匿名用户' }}</span>
@@ -58,10 +58,10 @@
 
           <div class="comment-list" v-if="comments.length > 0">
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar :size="36" :src="getImageUrl(comment.userAvatar)" />
+              <el-avatar :size="36" :src="getImageUrl(comment.userAvatar)" class="clickable-avatar" @click="openCommentUserProfile(comment.userId)" />
               <div class="comment-content">
                 <div class="comment-header">
-                  <span class="comment-user">{{ comment.userName }}</span>
+                  <span class="comment-user clickable-name" @click="openCommentUserProfile(comment.userId)">{{ comment.userName }}</span>
                   <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
                 </div>
                 <div class="comment-text">{{ comment.content }}</div>
@@ -85,20 +85,23 @@
 
                 <div v-if="comment.replies && comment.replies.length > 0" class="reply-list">
                   <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                    <div class="reply-header">
-                      <span class="reply-user">{{ reply.userName }}</span>
-                      <span v-if="reply.replyToUserName" class="reply-to">回复 @{{ reply.replyToUserName }}</span>
-                      <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
-                    </div>
-                    <div class="reply-text">{{ reply.content }}</div>
-                    <div class="reply-footer">
-                      <el-button link size="small" @click="toggleReplyInput(comment.id, reply.userName, reply.id)">回复</el-button>
-                      <el-button link size="small" :type="reply.liked ? 'primary' : 'default'" @click="handleReplyLike(reply.id)">
-                        点赞 ({{ reply.likes || 0 }})
-                      </el-button>
-                      <el-button v-if="currentUser && (isAdminUser || currentUser.id === reply.userId)" link size="small" type="danger" @click="handleDeleteComment(reply.id)">
-                        删除
-                      </el-button>
+                    <el-avatar :size="28" :src="getImageUrl(reply.userAvatar)" class="reply-avatar" @click="openCommentUserProfile(reply.userId)" />
+                    <div class="reply-content">
+                      <div class="reply-header">
+                        <span class="reply-user clickable-name" @click="openCommentUserProfile(reply.userId)">{{ reply.userName }}</span>
+                        <span v-if="reply.replyToUserName" class="reply-to">回复 @{{ reply.replyToUserName }}</span>
+                        <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
+                      </div>
+                      <div class="reply-text">{{ reply.content }}</div>
+                      <div class="reply-footer">
+                        <el-button link size="small" @click="toggleReplyInput(comment.id, reply.userName, reply.id)">回复</el-button>
+                        <el-button link size="small" :type="reply.liked ? 'primary' : 'default'" @click="handleReplyLike(reply.id)">
+                          点赞 ({{ reply.likes || 0 }})
+                        </el-button>
+                        <el-button v-if="currentUser && (isAdminUser || currentUser.id === reply.userId)" link size="small" type="danger" @click="handleDeleteComment(reply.id)">
+                          删除
+                        </el-button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -112,6 +115,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 用户主页弹窗 -->
+    <UserProfileDialog
+        v-model="userProfileDialogVisible"
+        :user-id="profileDialogUserId"
+    />
   </div>
 </template>
 
@@ -121,6 +130,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox, ElAvatar, ElButton, ElInput, ElEmpty } from 'element-plus'
 import { getWorkDetail, likeWork, collectWork, getWorkComments, addWorkComment, likeWorkComment, deleteWorkComment } from '@/api/modules/work'
 import { isAdmin } from '@/utils/permission'
+import UserProfileDialog from './UserProfileDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -137,6 +147,8 @@ const replyToUserName = ref('')
 const replyToId = ref(null)
 const currentUser = ref(null)
 const isAdminUser = isAdmin()
+const userProfileDialogVisible = ref(false)
+const profileDialogUserId = ref(null)
 
 onMounted(() => {
   workId.value = route.params.id
@@ -288,6 +300,20 @@ const handleDeleteComment = async (commentId) => {
 
 const goBack = () => { router.push('/main') }
 
+const openUserProfile = () => {
+  if (work.value && work.value.userId) {
+    profileDialogUserId.value = work.value.userId
+    userProfileDialogVisible.value = true
+  }
+}
+
+// 打开评论用户的主页弹窗
+const openCommentUserProfile = (userId) => {
+  if (!userId) return
+  profileDialogUserId.value = userId
+  userProfileDialogVisible.value = true
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return ''
   try {
@@ -340,6 +366,9 @@ const getTypeName = (type) => {
 .comment-content { flex: 1; }
 .comment-header { display: flex; gap: 10px; align-items: center; margin-bottom: 5px; }
 .comment-user { font-size: 14px; font-weight: 500; color: #333; }
+.clickable-name { cursor: pointer; }
+.clickable-name:hover { color: #d4af37; }
+.clickable-avatar { cursor: pointer; }
 .comment-time { font-size: 12px; color: #999; }
 .comment-text { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 8px; }
 .comment-footer { display: flex; gap: 15px; }
@@ -347,8 +376,9 @@ const getTypeName = (type) => {
 .reply-input-wrapper { margin-top: 10px; margin-bottom: 10px; }
 .reply-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
 .reply-list { margin-top: 15px; padding: 15px; background: #f8f8f8; border-radius: 8px; }
-.reply-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+.reply-item { display: flex; gap: 10px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
 .reply-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.reply-avatar { cursor: pointer; flex-shrink: 0; }
 .reply-header { display: flex; gap: 8px; align-items: center; margin-bottom: 5px; flex-wrap: wrap; }
 .reply-user { font-size: 13px; font-weight: 500; color: #333; }
 .reply-to { font-size: 12px; color: #d4af37; margin: 0 4px; }

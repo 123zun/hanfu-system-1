@@ -1,10 +1,16 @@
 package com.server.user.controller;
 
 import com.server.common.R;
+import com.server.follow.service.FollowService;
 import com.server.security.UserPrincipal;
 import com.server.user.dto.LoginRequest;
 import com.server.user.entity.UserInfo;
+import com.server.user.mapper.UserMapper;
 import com.server.user.service.UserService;
+import com.server.work.dto.WorkDTO;
+import com.server.work.dto.WorkPageDTO;
+import com.server.work.dto.WorkQuery;
+import com.server.work.service.WorkService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -25,6 +32,15 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private FollowService followService;
+
+    @Autowired
+    private WorkService workService;
+
+    @Autowired
+    private UserMapper userMapper;
 
     // 从配置文件中读取上传路径
     @Value("${file.upload.path}")
@@ -70,6 +86,52 @@ public class UserController {
     @PostMapping("/info")
     public R<?> getUserInfo(@RequestBody Long id) {
         return userService.getUserInfo(id);
+    }
+
+    // 获取用户主页信息（包含用户信息、关注数、粉丝数、是否关注、该用户发布的帖子）
+    @GetMapping("/profile")
+    public R<?> getUserProfile(
+            @RequestParam Long userId,
+            @RequestParam(required = false) Long currentUserId) {
+        try {
+            // 获取用户基本信息
+            UserInfo userInfo = userMapper.selectById(userId);
+            if (userInfo == null) {
+                return R.error("用户不存在");
+            }
+            userInfo.setPassword(null);
+
+            // 获取关注数、粉丝数
+            long followingCount = followService.getFollowingCount(userId);
+            long followerCount = followService.getFollowerCount(userId);
+
+            // 检查当前用户是否关注了该用户
+            boolean isFollowing = false;
+            if (currentUserId != null) {
+                isFollowing = followService.isFollowing(currentUserId, userId);
+            }
+
+            // 获取该用户发布的帖子（最新发布的作品）
+            WorkQuery workQuery = new WorkQuery();
+            workQuery.setPage(1);
+            workQuery.setSize(20);
+            workQuery.setUserId(userId);
+            workQuery.setSort("latest");
+            WorkPageDTO worksPage = workService.getWorkList(workQuery, currentUserId);
+
+            // 构建返回数据
+            Map<String, Object> data = new HashMap<>();
+            data.put("userInfo", userInfo);
+            data.put("followingCount", followingCount);
+            data.put("followerCount", followerCount);
+            data.put("isFollowing", isFollowing);
+            data.put("works", worksPage);
+
+            return R.success(data);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return R.error("获取用户信息失败: " + e.getMessage());
+        }
     }
 
     // 更新用户信息

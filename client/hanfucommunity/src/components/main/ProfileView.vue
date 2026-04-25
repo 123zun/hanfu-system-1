@@ -28,12 +28,12 @@
             <span class="stat-number">{{ myPostCount }}</span>
             <span class="stat-label">帖子</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-number">{{ userInfo.followers || 0 }}</span>
+          <div class="stat-item" @click="openFollowersDialog">
+            <span class="stat-number">{{ followerCount }}</span>
             <span class="stat-label">关注者</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-number">{{ userInfo.following || 0 }}</span>
+          <div class="stat-item" @click="openFollowingDialog">
+            <span class="stat-number">{{ followingCount }}</span>
             <span class="stat-label">关注中</span>
           </div>
           <div class="stat-item" @click="openMyCollectionsDialog">
@@ -350,6 +350,26 @@
       </ul>
     </div>
   </el-dialog>
+
+  <!-- 关注者列表弹窗 -->
+  <FollowListDialog
+      v-model="followersDialogVisible"
+      type="followers"
+      :user-id="currentUserId"
+  />
+
+  <!-- 关注列表弹窗 -->
+  <FollowListDialog
+      v-model="followingDialogVisible"
+      type="following"
+      :user-id="currentUserId"
+  />
+
+  <!-- 用户主页弹窗 -->
+  <UserProfileDialog
+      v-model="userProfileDialogVisible"
+      :user-id="profileDialogUserId"
+  />
 </template>
 
 <script setup>
@@ -368,10 +388,12 @@ import {
   InfoFilled,
   Warning
 } from '@element-plus/icons-vue'
-import { getUserInfo, updateUserInfo, uploadAvatar,changePassword } from '@/api/modules/user'
+import { getUserInfo, updateUserInfo, uploadAvatar, changePassword, getFollowCounts } from '@/api/modules/user'
 import { getMyArticleCollections } from '@/api/modules/article'
 import { getWorkList, deleteWork, getMyWorkCollections } from '@/api/modules/work'
 import { getArticleList } from '@/api/modules/article'
+import FollowListDialog from './FollowListDialog.vue'
+import UserProfileDialog from './UserProfileDialog.vue'
 
 import { useRouter } from 'vue-router'
 
@@ -387,6 +409,15 @@ const myPostsList = ref([])
 const myCollectionsList = ref([])
 const myPostsDialogVisible = ref(false)
 const myCollectionsDialogVisible = ref(false)
+
+// 关注相关
+const followerCount = ref(0)
+const followingCount = ref(0)
+const followersDialogVisible = ref(false)
+const followingDialogVisible = ref(false)
+const userProfileDialogVisible = ref(false)
+const profileDialogUserId = ref(null)
+const currentUserId = ref(null)
 
 // 表单引用
 const profileFormRef = ref()
@@ -520,6 +551,7 @@ const passwordRules = {
 
 // 页面加载
 onMounted(() => {
+  currentUserId.value = localStorage.getItem('current_user_id')
   loadUserProfile()
   loadMyPosts()
   loadMyCollections()
@@ -551,6 +583,17 @@ const loadUserProfile = async () => {
         region: data.region || '',
         password: data.password || ''
       })
+    }
+
+    // 加载关注/粉丝数
+    try {
+      const countsRes = await getFollowCounts(userId)
+      if (countsRes && countsRes.code === 200) {
+        followerCount.value = countsRes.data?.followerCount || 0
+        followingCount.value = countsRes.data?.followingCount || 0
+      }
+    } catch (e) {
+      console.error('加载关注数失败:', e)
     }
   } catch (error) {
     console.error('加载用户信息失败:', error)
@@ -887,6 +930,16 @@ const openMyPostsDialog = async () => {
 const openMyCollectionsDialog = async () => {
   myCollectionsDialogVisible.value = true
   await loadMyCollections()
+}
+
+// 打开关注者列表弹窗
+const openFollowersDialog = () => {
+  followersDialogVisible.value = true
+}
+
+// 打开关注列表弹窗
+const openFollowingDialog = () => {
+  followingDialogVisible.value = true
 }
 
 // 加载我的帖子（资讯+作品合并）

@@ -16,7 +16,7 @@
           <h1 class="article-title">{{ article.title }}</h1>
 
           <div class="article-meta">
-            <div class="author-info">
+            <div class="author-info" @click="openUserProfile" style="cursor:pointer;">
               <el-avatar :size="40" :src="getImageUrl(article.authorAvatar)" />
               <div class="author-detail">
                 <span class="author-name">{{ article.authorName || '匿名用户' }}</span>
@@ -109,10 +109,10 @@
           <!-- 评论列表 -->
           <div class="comment-list" v-if="comments.length > 0">
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar :size="36" :src="getImageUrl(comment.userAvatar)" />
+              <el-avatar :size="36" :src="getImageUrl(comment.userAvatar)" class="clickable-avatar" @click="openCommentUserProfile(comment.userId)" />
               <div class="comment-content">
                 <div class="comment-header">
-                  <span class="comment-user">{{ comment.userName }}</span>
+                  <span class="comment-user clickable-name" @click="openCommentUserProfile(comment.userId)">{{ comment.userName }}</span>
                   <span class="comment-time">{{ formatDate(comment.createTime) }}</span>
                 </div>
                 <div class="comment-text">{{ comment.content }}</div>
@@ -166,12 +166,14 @@
                 <!-- 回复列表 -->
                 <div v-if="comment.replies && comment.replies.length > 0" class="reply-list">
                   <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                    <div class="reply-header">
-                      <span class="reply-user">{{ reply.userName }}</span>
-                      <span v-if="reply.replyToUserName" class="reply-to">回复 @{{ reply.replyToUserName }}</span>
-                      <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
-                    </div>
-                    <div class="reply-text">{{ reply.content }}</div>
+                    <el-avatar :size="28" :src="getImageUrl(reply.userAvatar)" class="reply-avatar" @click="openCommentUserProfile(reply.userId)" />
+                    <div class="reply-content">
+                      <div class="reply-header">
+                        <span class="reply-user clickable-name" @click="openCommentUserProfile(reply.userId)">{{ reply.userName }}</span>
+                        <span v-if="reply.replyToUserName" class="reply-to">回复 @{{ reply.replyToUserName }}</span>
+                        <span class="reply-time">{{ formatDate(reply.createTime) }}</span>
+                      </div>
+                      <div class="reply-text">{{ reply.content }}</div>
                     <div class="reply-footer">
                       <el-button
                           link
@@ -221,6 +223,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 用户主页弹窗 -->
+    <UserProfileDialog
+        v-model="userProfileDialogVisible"
+        :user-id="profileDialogUserId"
+    />
   </div>
 </template>
 
@@ -240,6 +248,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getArticleDetail, likeArticle, collectArticle, getComments, addComment, likeComment as apiLikeComment, deleteComment } from '@/api/modules/article'
 import { isAdmin } from '@/utils/permission'
+import UserProfileDialog from './UserProfileDialog.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -256,6 +265,7 @@ const article = ref({
   excerpt: '',
   coverImage: '',
   category: '',
+  authorId: null,
   authorName: '',
   authorAvatar: '',
   views: 0,
@@ -282,6 +292,8 @@ const commentPageSize = 10
 // 当前用户
 const currentUser = ref(null)
 const isAdminUser = isAdmin()
+const userProfileDialogVisible = ref(false)
+const profileDialogUserId = ref(null)
 
 // 分类映射
 const categoryMap = {
@@ -633,6 +645,21 @@ const getImageUrl = (path) => {
 const goBack = () => {
   router.push('/main')
 }
+
+// 打开用户主页弹窗
+const openUserProfile = () => {
+  if (article.value && article.value.authorId) {
+    profileDialogUserId.value = article.value.authorId
+    userProfileDialogVisible.value = true
+  }
+}
+
+// 打开评论用户的主页弹窗
+const openCommentUserProfile = (userId) => {
+  if (!userId) return
+  profileDialogUserId.value = userId
+  userProfileDialogVisible.value = true
+}
 </script>
 
 <style scoped>
@@ -892,6 +919,10 @@ const goBack = () => {
   color: #333;
 }
 
+.clickable-name { cursor: pointer; }
+.clickable-name:hover { color: #d4af37; }
+.clickable-avatar { cursor: pointer; }
+
 .comment-time {
   font-size: 12px;
   color: #999;
@@ -930,9 +961,13 @@ const goBack = () => {
 }
 
 .reply-item {
+  display: flex;
+  gap: 10px;
   padding: 12px 0;
   border-bottom: 1px solid #f0e6d6;
 }
+
+.reply-avatar { cursor: pointer; flex-shrink: 0; }
 
 .reply-header {
   display: flex;
