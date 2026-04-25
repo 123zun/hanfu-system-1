@@ -281,6 +281,7 @@ import { getHotWorks, getWorkList } from '@/api/modules/work'
 import { getDashboardStats } from '@/api/modules/dashboard'
 import { isAdmin } from '@/utils/permission'
 import { getUnreadCount } from '@/api/modules/message'
+import { getFollowCounts } from '@/api/modules/user'
 
 const router = useRouter()
 
@@ -364,9 +365,24 @@ const loadUserInfo = async () => {
       userInfo.value = user
       // 加载当前用户帖子数
       await loadUserPostCount(user.id)
+      // 加载关注数和粉丝数
+      await loadFollowCounts(user.id)
     }
   } catch (error) {
     console.error('加载用户信息失败:', error)
+  }
+}
+
+// 加载关注数和粉丝数
+const loadFollowCounts = async (userId) => {
+  try {
+    const res = await getFollowCounts(userId)
+    if (res && res.code === 200 && res.data) {
+      userInfo.value.followers = res.data.followerCount || 0
+      userInfo.value.following = res.data.followingCount || 0
+    }
+  } catch (error) {
+    console.error('加载关注数失败:', error)
   }
 }
 
