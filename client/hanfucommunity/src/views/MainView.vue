@@ -43,10 +43,21 @@
               <el-icon><DocumentChecked /></el-icon>
               内容审核
             </el-menu-item>
-            <el-menu-item index="profile">
-              <el-icon><User /></el-icon>
-              个人中心
+            <el-menu-item index="messages" @click="goToMessages">
+              <el-icon><Message /></el-icon>
+              私信
+              <span v-if="unreadCount > 0" class="unread-badge-nav">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
             </el-menu-item>
+            <el-sub-menu index="more">
+              <template #title>
+                <el-icon><More /></el-icon>
+                更多
+              </template>
+              <el-menu-item index="profile">
+                <el-icon><User /></el-icon>
+                个人中心
+              </el-menu-item>
+            </el-sub-menu>
           </el-menu>
         </nav>
       </div>
@@ -250,7 +261,8 @@ import {
   Location,
   Plus,
   Setting,
-  DocumentChecked
+  DocumentChecked,
+  More
 } from '@element-plus/icons-vue'
 
 // 导入各个板块组件
@@ -261,12 +273,14 @@ import ActivitiesView from '@/components/main/ActivityView.vue'
 import ResourcesView from '@/components/main/ResourcesView.vue'
 import UsersView from '@/components/main/UsersView.vue'
 import AuditView from '@/components/main/AuditView.vue'
+import MessagesView from '@/views/MessagesView.vue'
 
 // API
 import { getHotArticles } from '@/api/modules/article'
 import { getHotWorks, getWorkList } from '@/api/modules/work'
 import { getDashboardStats } from '@/api/modules/dashboard'
 import { isAdmin } from '@/utils/permission'
+import { getUnreadCount } from '@/api/modules/message'
 
 const router = useRouter()
 
@@ -275,6 +289,7 @@ const defaultAvatar = 'http://localhost:8080/uploads/avatars/default.png'
 
 // 用户信息
 const userInfo = ref({})
+const unreadCount = ref(0)
 
 // 是否是管理员
 const isAdminUser = isAdmin()
@@ -304,7 +319,8 @@ const componentMap = {
   resources: markRaw(ResourcesView),
   users: markRaw(UsersView),
   profile: markRaw(ProfileView),
-  audit: markRaw(AuditView)
+  audit: markRaw(AuditView),
+  messages: markRaw(MessagesView)
 }
 
 // 当前显示的组件
@@ -317,7 +333,27 @@ onMounted(() => {
   loadUserInfo()
   loadHotList()
   loadCommunityStats()
+  loadUnreadCount()
 })
+
+// 加载未读消息数
+const loadUnreadCount = async () => {
+  const userId = localStorage.getItem('current_user_id')
+  if (!userId) return
+  try {
+    const res = await getUnreadCount(userId)
+    if (res && res.code === 200) {
+      unreadCount.value = res.data?.unreadCount || 0
+    }
+  } catch (error) {
+    console.error('加载未读消息数失败:', error)
+  }
+}
+
+// 跳转私信页面
+const goToMessages = () => {
+  router.push('/messages')
+}
 
 // 加载用户信息
 const loadUserInfo = async () => {
@@ -1031,5 +1067,14 @@ const handleLogout = () => {
     left: 50%;
     transform: translateX(-50%);
   }
+}
+
+.unread-badge-nav {
+  background: #ff4d4f;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
 }
 </style>

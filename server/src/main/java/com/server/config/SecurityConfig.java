@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 "/api/user/register",
                                 "/api/user/check/**",
                                 "/api/user/health",
+                                "/api/user/forgot/**",
                                 "/api/dev/**",
                                 "/uploads/**",
                                 "/default/**"

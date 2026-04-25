@@ -124,6 +124,13 @@
             <artifactId>hutool-http</artifactId>
             <version>5.8.35</version>
         </dependency>
+
+        <!-- JavaMail -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
     </dependencies>
 
     <build>

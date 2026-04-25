@@ -340,4 +340,14 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(UserInfo::getStatus, 1);
         return userMapper.selectCount(wrapper);
     }
+
+    @Override
+    public boolean updatePassword(Long userId, String newPassword) {
+        if (userId == null || !StringUtils.hasText(newPassword)) {
+            return false;
+        }
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        int result = userMapper.updatePassword(userId, encodedPassword);
+        return result > 0;
+    }
 }

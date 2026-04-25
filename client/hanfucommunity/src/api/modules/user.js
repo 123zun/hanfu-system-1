@@ -157,3 +157,21 @@ export const getFollowCounts = (userId) => {
         params: { userId }
     })
 }
+
+// 获取关注列表
+export const getFollowingList = (userId) => {
+    return request({
+        url: `/follow/following/${userId}`,
+        method: 'GET',
+        params: { currentUserId: userId }
+    })
+}
+
+// 获取粉丝列表
+export const getFollowersList = (userId) => {
+    return request({
+        url: `/follow/followers/${userId}`,
+        method: 'GET',
+        params: { currentUserId: userId }
+    })
+}

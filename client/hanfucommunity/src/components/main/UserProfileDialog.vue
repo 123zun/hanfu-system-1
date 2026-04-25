@@ -42,6 +42,16 @@
           </div>
         </div>
         <div class="action-section">
+          <!-- 发消息按钮 -->
+          <el-button
+              v-if="isNotSelf"
+              type="warning"
+              :icon="Message"
+              @click="handleSendMessage"
+              class="message-btn"
+          >
+            发消息
+          </el-button>
           <!-- 关注按钮 -->
           <el-button
               v-if="canFollow"
@@ -53,7 +63,7 @@
           >
             {{ isFollowing ? '已关注' : '关注' }}
           </el-button>
-          <el-tag v-else type="info" class="self-tag">当前用户</el-tag>
+          <el-tag v-else-if="!isNotSelf" type="info" class="self-tag">当前用户</el-tag>
         </div>
       </div>
 
@@ -101,8 +111,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Male, Female, Clock, Location, View, ChatDotRound, Loading } from '@element-plus/icons-vue'
+import { Male, Female, Clock, Location, View, ChatDotRound, Loading, Message } from '@element-plus/icons-vue'
 import { getUserProfile, followUser, unfollowUser } from '@/api/modules/user'
+import { canSendMessage as checkCanSendMessage } from '@/api/modules/message'
 import { useRouter } from 'vue-router'
 
 const props = defineProps({
@@ -137,9 +148,18 @@ const followerCount = ref(0)
 const followingCount = ref(0)
 const isFollowing = ref(false)
 const currentUserId = ref(null)
+const canSendMessageFlag = ref(false)
 
 const canFollow = computed(() => {
   return currentUserId.value && String(currentUserId.value) !== String(props.userId)
+})
+
+const isNotSelf = computed(() => {
+  return currentUserId.value && String(currentUserId.value) !== String(props.userId)
+})
+
+const canSendMessage = computed(() => {
+  return canSendMessageFlag.value && isNotSelf.value
 })
 
 watch(() => props.modelValue, (val) => {
@@ -168,6 +188,18 @@ const loadUserProfile = async () => {
       followerCount.value = data.followerCount || 0
       followingCount.value = data.followingCount || 0
       isFollowing.value = data.isFollowing || false
+
+      // 检查是否可以发消息
+      if (currentUserId.value) {
+        try {
+          const canSendRes = await checkCanSendMessage(currentUserId.value, props.userId)
+          if (canSendRes && canSendRes.code === 200) {
+            canSendMessageFlag.value = canSendRes.data?.canSend || false
+          }
+        } catch (e) {
+          canSendMessageFlag.value = false
+        }
+      }
 
       // 解析works
       if (data.works && data.works.records) {
@@ -224,6 +256,13 @@ const handleFollowToggle = async () => {
 const goToDetail = (work) => {
   dialogVisible.value = false
   router.push(`/work/detail/${work.id}`)
+}
+
+// 发送消息，跳转到私信页面
+const handleSendMessage = () => {
+  if (!props.userId) return
+  dialogVisible.value = false
+  router.push(`/messages?userId=${props.userId}`)
 }
 
 const onDialogClosed = () => {
@@ -336,6 +375,17 @@ const getTypeName = (type) => {
 }
 
 .follow-btn:hover {
+  opacity: 0.9;
+}
+
+.message-btn {
+  background: linear-gradient(135deg, #e6a23c, #f56c6c);
+  border: none;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.message-btn:hover {
   opacity: 0.9;
 }
 

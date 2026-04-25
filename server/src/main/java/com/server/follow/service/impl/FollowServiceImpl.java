@@ -5,11 +5,20 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.server.follow.entity.Follow;
 import com.server.follow.mapper.FollowMapper;
 import com.server.follow.service.FollowService;
+import com.server.user.entity.UserInfo;
+import com.server.user.mapper.UserMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> implements FollowService {
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -56,5 +65,20 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Follow::getFollowingId, userId);
         return this.count(wrapper);
+    }
+
+    @Override
+    public List<UserInfo> getFollowingList(Long userId) {
+        LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Follow::getFollowerId, userId);
+        List<Follow> follows = this.list(wrapper);
+        List<UserInfo> users = new ArrayList<>();
+        for (Follow follow : follows) {
+            UserInfo user = userMapper.selectById(follow.getFollowingId());
+            if (user != null) {
+                users.add(user);
+            }
+        }
+        return users;
     }
 }

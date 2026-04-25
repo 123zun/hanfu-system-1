@@ -30,6 +30,12 @@ const routes = [
         meta: { title: '注册 - 汉韵华章' }
     },
     {
+        path: '/forgot-password',
+        name: 'forgot-password',
+        component: () => import('@/views/user/ForgotPasswordView.vue'),
+        meta: { title: '找回密码 - 汉韵华章' }
+    },
+    {
         path: '/article',
         name: 'article',
         component: () => import('@/components/main/ArticleCreate.vue'),
@@ -95,6 +101,15 @@ const routes = [
         component: () => import('@/components/main/ActivityView.vue'),
         meta: {
             title: '活动中心',
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/messages',
+        name: 'messages',
+        component: () => import('@/views/MessagesView.vue'),
+        meta: {
+            title: '私信',
             requiresAuth: true
         }
     }

@@ -29,4 +29,9 @@ public interface FollowService extends IService<Follow> {
      * 获取用户的粉丝数
      */
     long getFollowerCount(Long userId);
+
+    /**
+     * 获取用户的关注列表
+     */
+    java.util.List<com.server.user.entity.UserInfo> getFollowingList(Long userId);
 }

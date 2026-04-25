@@ -34,6 +34,11 @@ public interface UserService {
     R<?> changePassword(Long userId, String oldPassword, String newPassword);
 
     /**
+     * 更新密码（用于忘记密码）
+     */
+    boolean updatePassword(Long userId, String newPassword);
+
+    /**
      * 上传头像
      */
     R<?> uploadAvatar(Long userId, MultipartFile file);
