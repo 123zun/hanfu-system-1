@@ -535,8 +535,6 @@ const handleFileRemove = () => {
 
 // 上传资源
 const handleUpload = async () => {
-  console.log('点击上传，fileList:', fileList.value, 'length:', fileList.value.length)
-  
   if (fileList.value.length === 0) {
     ElMessage.warning('请选择要上传的文件')
     return
